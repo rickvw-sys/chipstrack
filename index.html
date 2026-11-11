@@ -734,6 +734,42 @@ function getPlace(cb){
   },function(e){cb("",e&&e.code===1?"Locatie staat uit. Geef Chipstrack toestemming in de instellingen van je telefoon of browser.":"Locatie ophalen mislukt. Probeer het opnieuw.")},{timeout:10000,maximumAge:600000});
 }
 function locPref(v){try{if(v===undefined)return localStorage.getItem("cs_loc")==="1";localStorage.setItem("cs_loc",v?"1":"0")}catch(e){return false}}
+/* ---------- keuzelijst bij merk, variant, smaak en type ---------- */
+function cmbItems(id,all){
+  var inp=$(id),q=(inp?inp.value:"").trim().toLowerCase(),bv=$("fb")?normName($("fb").value):"",vv=$("fv")?normName($("fv").value):"",key={fb:"brand",fv:"variant",ff:"flavor",ft:"type"}[id];
+  var pool=D.products;
+  if(id!=="fb"&&bv){var f=pool.filter(function(p){return normName(p.brand)===bv});if(f.length)pool=f}
+  if((id==="ff"||id==="ft")&&vv){var f2=pool.filter(function(p){return normName(p.variant)===vv});if(f2.length)pool=f2}
+  var o={};
+  pool.forEach(function(p){var v=String(p[key]||"").trim();if(!v)return;var k=normName(v),c=prodCount(p.id),e=o[k]||(o[k]={n:{},c:0});e.c+=c;e.n[v]=(e.n[v]||0)+c+1});
+  var l=keys(o).map(function(k){var e=o[k],nm=keys(e.n).sort(function(a,b){return e.n[b]-e.n[a]})[0];return{n:nm,c:e.c}});
+  if(!all&&q)l=l.filter(function(x){return x.n.toLowerCase().indexOf(q)>=0});
+  return l.sort(function(a,b){return b.c-a.c||a.n.localeCompare(b.n,"nl")});
+}
+function cmbIn(id,max,ph,val){return '<div class="ctw cmw"><input id="'+id+'" maxlength="'+max+'" placeholder="'+ph+'" value="'+esc(val||"")+'" autocomplete="off" role="combobox" aria-expanded="false"><button type="button" class="cmb" data-cmb="'+id+'" aria-label="Toon keuzes" tabindex="-1">▾</button><div class="ctl" id="'+id+'_l" role="listbox" hidden></div></div>'}
+function cmbShow(id,all){
+  var l=$(id+"_l");if(!l)return;
+  document.querySelectorAll(".cmw .ctl").forEach(function(x){if(x!==l)x.hidden=true});
+  var it=cmbItems(id,all);
+  if(!it.length){l.innerHTML='<div class="meta" style="padding:10px 12px">Nog niets om uit te kiezen. Typ zelf een waarde.</div>';l.hidden=false;return}
+  l.innerHTML=it.slice(0,80).map(function(x,i){return '<button type="button" class="cto" role="option" data-cmo="'+id+'" data-i="'+i+'">'+esc(x.n)+(x.c?' <small class="meta">· '+x.c+' check-in'+(x.c===1?'':'s')+'</small>':'')+'</button>'}).join("");
+  l.hidden=false;l._it=it;
+}
+function cmbBind(){
+  ["fb","fv","ff","ft"].forEach(function(id){
+    var i=$(id);if(!i)return;
+    i.oninput=function(){if(this.value.trim())cmbShow(id,false);else{var l=$(id+"_l");if(l)l.hidden=true}};
+    i.onkeydown=function(e){if(e.key==="Escape"){var l=$(id+"_l");if(l)l.hidden=true}};
+  });
+}
+document.addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest("[data-cmb]");
+  if(b){e.stopImmediatePropagation();e.preventDefault();var l=$(b.dataset.cmb+"_l");if(l&&!l.hidden){l.hidden=true}else cmbShow(b.dataset.cmb,true);return}
+  var o=e.target.closest&&e.target.closest("[data-cmo]");
+  if(o){e.stopImmediatePropagation();e.preventDefault();var id=o.dataset.cmo,l2=$(id+"_l"),x=l2&&l2._it&&l2._it[+o.dataset.i];if(x){$(id).value=x.n;l2.hidden=true;var nx={fb:"fv",fv:"ff"}[id];if(id==="fb"||id==="fv"){}}return}
+  if(!(e.target.closest&&e.target.closest(".cmw")))document.querySelectorAll(".cmw .ctl").forEach(function(x){x.hidden=true});
+},true);
+(function(){var s=document.createElement("style");s.textContent=".cmw input{padding-right:46px}.cmb{position:absolute;right:6px;top:4px;width:36px;height:36px;border:0;background:none;font-size:1.1rem;color:#141414;cursor:pointer;border-radius:10px}.cmw .ctl{top:100%;z-index:60}.cmw .cto small{font-weight:400}";document.head.appendChild(s)})();
 function openForm(code,pid,epid){
   var pr=pid?PR[pid]:(code?D.products.filter(function(p){return p.code===code})[0]:null),m=$("modal"),img="",manual=false;
   var ep=epid?D.posts.filter(function(x){return x.id===epid})[0]:null;
@@ -747,10 +783,10 @@ function openForm(code,pid,epid){
   var bcHtml='<label for="fc">Barcode (optioneel)</label><div class="row"><input id="fc" inputmode="numeric" maxlength="14" placeholder="8 tot 14 cijfers" value="'+esc(code||"")+'" autocomplete="off"><button type="button" class="btn sm" id="fcs">Scan</button></div><div id="fcr"></div><p class="meta" id="ofm" style="margin:4px 0 0" role="status"></p>';
   var top=pr?'<div class="info" style="margin:12px 0">'+infoRows(pr)+'</div>'+(pr.code?'<p class="meta">Barcode '+esc(pr.code)+' wordt overgenomen.</p>':(code?'<p class="meta">De barcode '+esc(code)+' wordt aan deze chips gekoppeld.</p>':'<p class="meta">Deze chips hebben nog geen barcode. Heb je de zak bij de hand? Voeg de barcode toe, dan kan iedereen deze chips voortaan scannen.</p>')+bcHtml)
     :'<p class="meta">'+(ep?'Pas merk, smaak of andere gegevens aan als ze niet klopten. Alleen jouw check-in verandert; andere check-ins blijven bij de oorspronkelijke chips.'+(epr.code?' De barcode blijft bij de oorspronkelijke chips.':''):code?'Barcode '+esc(code)+' staat nog niet in de database. Voeg de chips toe.':'Chips zonder barcode. Vul de gegevens zo volledig mogelijk in, dan koppelen we ze automatisch aan dezelfde chips als iemand later een barcode toevoegt.')+'</p>'
-    +'<label for="fb">Merk</label><input id="fb" list="bl" maxlength="40" placeholder="Bijvoorbeeld Walkers" value="'+esc(epr?epr.brand:"")+'"><datalist id="bl">'+list("brand")+'</datalist>'
-    +'<label for="fv">Variant (optioneel)</label><input id="fv" list="vl" maxlength="40" placeholder="Bijvoorbeeld Sensations" value="'+esc(epr?epr.variant:"")+'"><datalist id="vl">'+list("variant")+'</datalist>'
-    +'<label for="ff">Smaak</label><input id="ff" list="fl" maxlength="60" placeholder="Bijvoorbeeld Roasted Chicken &amp; Thyme" value="'+esc(epr?epr.flavor:"")+'"><datalist id="fl">'+list("flavor")+'</datalist>'
-    +'<label for="ft">Type (optioneel)</label><input id="ft" list="tl" maxlength="40" placeholder="Bijvoorbeeld Regular Crisp" value="'+esc(epr?epr.type:"")+'"><datalist id="tl">'+list("type")+'</datalist>'
+    +'<label for="fb">Merk</label>'+cmbIn("fb",40,"Bijvoorbeeld Walkers",epr?epr.brand:"")+''
+    +'<label for="fv">Variant (optioneel)</label>'+cmbIn("fv",40,"Bijvoorbeeld Sensations",epr?epr.variant:"")+''
+    +'<label for="ff">Smaak</label>'+cmbIn("ff",60,"Bijvoorbeeld Roasted Chicken &amp; Thyme",epr?epr.flavor:"")+''
+    +'<label for="ft">Type (optioneel)</label>'+cmbIn("ft",40,"Bijvoorbeeld Regular Crisp",epr?epr.type:"")+''
     +'<label for="fs">Verpakking in gram (optioneel)</label><input id="fs" type="number" inputmode="decimal" min="1" max="2000" step="0.1" placeholder="Bijvoorbeeld 150" value="'+esc(epr&&epr.size>0?String(epr.size):"")+'">'+(ep?"":bcHtml);
   m.innerHTML='<div class="modal" id="ov"><div class="sheet" role="dialog" aria-label="'+(ep?"Check-in aanpassen":"Recensie toevoegen")+'"><div class="row"><div class="name grow" style="font-size:1.3rem">'+(ep?"Check-in aanpassen":"Recensie toevoegen")+'</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div>'+top
    +'<div class="card" style="margin-top:12px">'+rate("rt","Smaak",ep&&ep.taste!=null?ep.taste:3)+rate("rx","Textuur",ep&&ep.tex!=null?ep.tex:3)
@@ -760,6 +796,7 @@ function openForm(code,pid,epid){
    +(canTag?'<label>Vrienden taggen (optioneel)</label><div id="tgw"></div>':'')
    +'<label for="fx">Recensie (optioneel)</label><textarea id="fx" rows="3" maxlength="450" placeholder="Schrijf hier je reactie..."></textarea><div class="meta" style="text-align:right" id="fcnt">0/450</div></div>'
    +'<button class="btn full" id="ok">'+(ep?"Opslaan":"Versturen")+'</button></div></div>';
+  cmbBind();
   function show(id,v){$(id+"s").innerHTML=stars(v);$(id+"v").textContent=(+v).toFixed(1)}
   function upd(){show("rt",+$("rt").value);show("rx",+$("rx").value);if(!manual)$("ro").value=Math.round((+$("rt").value+(+$("rx").value))/2*2)/2;var t=+$("ro").value;$("rov").textContent=t.toFixed(1);$("ros").innerHTML=stars(t)}
   $("rt").oninput=upd;$("rx").oninput=upd;$("ro").oninput=function(){manual=true;upd()};upd();
@@ -1429,10 +1466,10 @@ function openAdmin(){
     h+='<div class="name" style="font-size:1.05rem;margin-top:6px">Meldingen ('+ADM.rep.length+')</div>'+(ADM.rep.length?ADM.rep.map(repCard).join(""):'<p class="meta">Geen openstaande meldingen.</p>');
     h+='<div class="name" style="font-size:1.05rem;margin-top:16px">Mogelijke dubbelen ('+g.length+')</div>';
     h+=g.length?g.map(function(a){return '<div class="card" style="padding:8px 12px;margin:8px 0">'+a.map(line).join("")+'<button class="btn ghost sm" data-grp="'+a.map(function(p){return p.id}).join(",")+'" style="margin-top:8px">Selecteer deze groep</button></div>'}).join(""):'<p class="meta">Geen dubbelen gevonden op merk en smaak.</p>';
-    h+='<div class="name" style="font-size:1.05rem;margin-top:16px">Alle chips</div><input id="adq" placeholder="Zoek op merk of smaak" aria-label="Zoeken" value="'+esc(ADM.q)+'" style="margin:8px 0">';
+    h+='<div class="name" style="font-size:1.05rem;margin-top:16px">Alle chips</div><input id="adq" placeholder="Zoek op merk of smaak" aria-label="Zoeken" value="'+esc(ADM.q)+'" style="margin:8px 0"><button class="btn ghost sm" data-s0="1" style="margin-bottom:8px">Selecteer alle chips zonder check-ins ('+D.products.filter(function(p){return (!q||(p.brand+" "+p.variant+" "+p.flavor+" "+p.type).toLowerCase().indexOf(q)>=0)&&!prodCount(p.id)}).length+')</button>';
     var l=D.products.filter(function(p){return !q||(p.brand+" "+p.variant+" "+p.flavor+" "+p.type).toLowerCase().indexOf(q)>=0}).sort(function(a,b){return (a.brand+a.flavor).localeCompare(b.brand+b.flavor)}).slice(0,60);
     h+=l.map(line).join("")+(D.products.length>60&&!q?'<p class="meta">Eerste 60 chips. Gebruik het zoekveld voor de rest.</p>':"");
-    h+='<div style="position:sticky;bottom:0;background:var(--bg,#fff);padding:10px 0"><button class="btn full" id="admg" '+(n<2?"disabled":"")+'>'+(n<2?"Selecteer minstens 2 chips":"Voeg "+n+" chips samen")+'</button></div>';
+    h+='<div style="position:sticky;bottom:0;background:var(--bg,#fff);padding:10px 0"><button class="btn full" id="admg" '+(n<2?"disabled":"")+'>'+(n<2?"Selecteer minstens 2 chips":"Voeg "+n+" chips samen")+'</button><button class="btn ghost full" id="admd" style="margin-top:8px" '+(n<1?"disabled":"")+'>'+(n<1?"Selecteer chips om te verwijderen":"Verwijder "+n+" chip"+(n===1?"":"s"))+'</button></div>';
     var b=$("adbody"),f=document.activeElement&&document.activeElement.id==="adq";b.innerHTML=h;
     if(f){var i=$("adq");i.focus();i.setSelectionRange(i.value.length,i.value.length)}
   }
@@ -1462,7 +1499,21 @@ function openAdmin(){
     else if(t.dataset.grp){t.dataset.grp.split(",").forEach(function(i){ADM.sel[i]=true});draw()}
     else if(t.dataset.ap){editProduct(t.dataset.ap)}
     else if(t.id==="admg"){mergeSel()}
+    else if(t.id==="admd"){delSel()}
+    else if(t.dataset.s0){var q0=ADM.q.trim().toLowerCase();D.products.forEach(function(p){if((!q0||(p.brand+" "+p.variant+" "+p.flavor+" "+p.type).toLowerCase().indexOf(q0)>=0)&&!prodCount(p.id))ADM.sel[p.id]=true});draw()}
   };
+  async function delSel(){
+    var ps=keys(ADM.sel).filter(function(k){return ADM.sel[k]&&PR[k]}).map(function(k){return PR[k]});if(!ps.length)return;
+    var ck=ps.reduce(function(s,p){return s+prodCount(p.id)},0);
+    var msg=ps.length===1?'Verwijder "'+ps[0].brand+" "+ps[0].flavor+'"?':"Verwijder "+ps.length+" chips?";
+    msg+=ck?" LET OP: hierbij worden ook "+ck+" check-ins van deze chips met alle likes en reacties verwijderd. Dit kan niet ongedaan worden gemaakt.":" Er zijn geen check-ins aan gekoppeld. Dit kan niet ongedaan worden gemaakt.";
+    if(!confirm(msg))return;
+    var btn=$("admd");if(btn){btn.disabled=true;btn.textContent="Bezig..."}
+    var ids=ps.map(function(p){return p.id}),bad=0,done=0;
+    for(var i=0;i<ids.length;i+=100){var r=await SB.rpc("admin_delete_products",{p_ids:ids.slice(i,i+100),p_with_checkins:ck>0});if(r.error){bad=1;toast("Verwijderen mislukt: "+r.error.message+" (draai verwijder_chips.sql)");break}done+=r.data||0}
+    ADM.sel={};try{await loadAll()}catch(e){}
+    if($("adbody"))draw();if(!bad)toast(done+" chips verwijderd");
+  }
   $("adbody").oninput=function(e){if(e.target.id==="adq"){ADM.q=e.target.value;draw()}};
   async function mergeSel(){
     var ps=keys(ADM.sel).filter(function(k){return ADM.sel[k]&&PR[k]}).map(function(k){return PR[k]});if(ps.length<2)return;
