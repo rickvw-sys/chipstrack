@@ -354,6 +354,7 @@ function updateCheckin(id,f){
 async function submitCheckin(f){
   if(!gate())return;
   var pr=f.pid?PR[f.pid]:null,hadCode=pr&&pr.code;
+  if(f.code&&pr&&!pr.code)pr.code=f.code;
   if(!pr){pr={id:"tmp"+nid(),code:f.code||"",brand:f.brand,variant:f.variant,flavor:f.flavor,type:f.type,size:f.size,uid:uid,ts:Date.now()};PR[pr.id]=pr;D.products.push(pr)}
   D.posts.push(mkPost({id:"tmp"+nid(),uid:uid,pid:pr.id,taste:f.taste,tex:f.tex,rating:f.rating,img:f.img,text:f.text,place:f.place||"",ts:Date.now()},pr));
   render();
@@ -719,13 +720,14 @@ function openForm(code,pid,epid){
   if(!ep&&pr){var lp=D.posts.filter(function(x){return x.pid===pr.id&&imgOk(x.img)}).sort(function(a,b){return b.ts-a.ts})[0];if(lp){img=imgOk(lp.img);carried=true}}
   function list(k){var o={};D.products.forEach(function(p){if(p[k])o[p[k]]=1});return keys(o).map(function(x){return '<option value="'+esc(x)+'">'}).join("")}
   function rate(id,label,v){return '<div class="srow" style="padding:10px 0 0"><span>'+label+'</span><span id="'+id+'s"></span><b id="'+id+'v"></b></div><input type="range" id="'+id+'" min="0.5" max="5" step="0.5" value="'+v+'" aria-label="'+label+'">'}
-  var top=pr?'<div class="info" style="margin:12px 0">'+infoRows(pr)+'</div>'+(code&&!pr.code?'<p class="meta">De barcode '+esc(code)+' wordt aan deze chips gekoppeld.</p>':'')
+  var bcHtml='<label for="fc">Barcode (optioneel)</label><div class="row"><input id="fc" inputmode="numeric" maxlength="14" placeholder="8 tot 14 cijfers" value="'+esc(code||"")+'" autocomplete="off"><button type="button" class="btn sm" id="fcs">Scan</button></div><div id="fcr"></div>';
+  var top=pr?'<div class="info" style="margin:12px 0">'+infoRows(pr)+'</div>'+(pr.code?'<p class="meta">Barcode '+esc(pr.code)+' wordt overgenomen.</p>':(code?'<p class="meta">De barcode '+esc(code)+' wordt aan deze chips gekoppeld.</p>':'<p class="meta">Deze chips hebben nog geen barcode. Heb je de zak bij de hand? Voeg de barcode toe, dan kan iedereen deze chips voortaan scannen.</p>')+bcHtml)
     :'<p class="meta">'+(ep?'Pas merk, smaak of andere gegevens aan als ze niet klopten. Alleen jouw check-in verandert; andere check-ins blijven bij de oorspronkelijke chips.'+(epr.code?' De barcode blijft bij de oorspronkelijke chips.':''):code?'Barcode '+esc(code)+' staat nog niet in de database. Voeg de chips toe.':'Chips zonder barcode. Vul de gegevens zo volledig mogelijk in, dan koppelen we ze automatisch aan dezelfde chips als iemand later een barcode toevoegt.')+'</p>'
     +'<label for="fb">Merk</label><input id="fb" list="bl" maxlength="40" placeholder="Bijvoorbeeld Walkers" value="'+esc(epr?epr.brand:"")+'"><datalist id="bl">'+list("brand")+'</datalist>'
     +'<label for="fv">Variant (optioneel)</label><input id="fv" list="vl" maxlength="40" placeholder="Bijvoorbeeld Sensations" value="'+esc(epr?epr.variant:"")+'"><datalist id="vl">'+list("variant")+'</datalist>'
     +'<label for="ff">Smaak</label><input id="ff" list="fl" maxlength="60" placeholder="Bijvoorbeeld Roasted Chicken &amp; Thyme" value="'+esc(epr?epr.flavor:"")+'"><datalist id="fl">'+list("flavor")+'</datalist>'
     +'<label for="ft">Type (optioneel)</label><input id="ft" list="tl" maxlength="40" placeholder="Bijvoorbeeld Regular Crisp" value="'+esc(epr?epr.type:"")+'"><datalist id="tl">'+list("type")+'</datalist>'
-    +'<label for="fs">Verpakking (gram)</label><input id="fs" type="number" inputmode="decimal" min="1" max="2000" step="0.1" placeholder="Bijvoorbeeld 150" value="'+esc(epr?String(epr.size):"")+'">';
+    +'<label for="fs">Verpakking (gram)</label><input id="fs" type="number" inputmode="decimal" min="1" max="2000" step="0.1" placeholder="Bijvoorbeeld 150" value="'+esc(epr?String(epr.size):"")+'">'+(ep?"":bcHtml);
   m.innerHTML='<div class="modal" id="ov"><div class="sheet" role="dialog" aria-label="'+(ep?"Check-in aanpassen":"Recensie toevoegen")+'"><div class="row"><div class="name grow" style="font-size:1.3rem">'+(ep?"Check-in aanpassen":"Recensie toevoegen")+'</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div>'+top
    +'<div class="card" style="margin-top:12px">'+rate("rt","Smaak",ep&&ep.taste!=null?ep.taste:3)+rate("rx","Textuur",ep&&ep.tex!=null?ep.tex:3)
    +'<div class="tot"><div class="row"><b class="grow">TOTAAL</b><b class="tn" id="rov"></b></div><div id="ros" class="st big" style="margin:6px 0"></div><input type="range" id="ro" min="0.5" max="5" step="0.5" value="'+(ep?ep.rating:3)+'" aria-label="Totaal"></div>'
@@ -753,9 +755,11 @@ function openForm(code,pid,epid){
   if(!ep&&locPref()&&navigator.permissions&&navigator.permissions.query){
     navigator.permissions.query({name:"geolocation"}).then(function(s){if(s.state==="granted"&&!place&&$("lcw")){lbusy=true;lcDraw();getPlace(function(t,err){lbusy=false;if($("lcw")){place=t;lmsg=err;lcDraw()}})}}).catch(function(){});
   }
-  function close(){closeModal()}
+  function close(){stopScan();closeModal()}
   $("cx").onclick=close;$("ov").onclick=function(e){if(e.target.id==="ov")close()};
+  if($("fcs"))$("fcs").onclick=function(){scan("fcr",function(c){var v=String(c).replace(/\s+/g,"");$("fc").value=v;$("fcr").innerHTML=""})};
   $("ok").onclick=function(){
+    stopScan();
     if(ep){
       var g={place:place,img:img,text:$("fx").value.trim(),taste:+$("rt").value,tex:+$("rx").value,rating:+$("ro").value,brand:$("fb").value.trim(),variant:$("fv").value.trim(),flavor:$("ff").value.trim(),type:$("ft").value.trim(),size:parseFloat($("fs").value)};
       if(!g.brand||!g.flavor){toast("Vul merk en smaak in");return}
@@ -763,13 +767,19 @@ function openForm(code,pid,epid){
       if(updateCheckin(ep.id,g)){closeModal();toast("Check-in aangepast")}return;
     }
     var f={code:code||"",place:place,img:img,text:$("fx").value.trim(),taste:+$("rt").value,tex:+$("rx").value,rating:+$("ro").value};
+    var bcv=$("fc")?$("fc").value.trim().replace(/\s+/g,""):"";
+    if(bcv&&!/^\d{8,14}$/.test(bcv)){toast("Een barcode bestaat uit 8 tot 14 cijfers");return}
+    f.code=bcv||f.code;
+    var bx=f.code?D.products.filter(function(x){return x.code===f.code})[0]:null;
+    if(bx&&pr&&bx.id!==pr.id){toast("Deze barcode hoort al bij "+bx.brand+" "+bx.flavor+".");return}
     if(pr){f.pid=pr.id;f.brand=pr.brand;f.variant=pr.variant;f.flavor=pr.flavor;f.type=pr.type;f.size=pr.size}
     else{
       f.brand=$("fb").value.trim();f.variant=$("fv").value.trim();f.flavor=$("ff").value.trim();f.type=$("ft").value.trim();f.size=parseFloat($("fs").value);
-      if(!f.brand||!f.flavor){toast("Vul merk en smaak in");return}
-      if(!(f.size>0)){toast("Vul de verpakking in gram in");return}
+      if(!bx&&(!f.brand||!f.flavor)){toast("Vul merk en smaak in");return}
+      if(!bx&&!(f.size>0)){toast("Vul de verpakking in gram in");return}
       var key=[f.brand,f.variant,f.flavor,f.type,Math.round(f.size)].map(function(x){return String(x).trim().toLowerCase()}).join("|");
       var ex=D.products.filter(function(p){return [p.brand,p.variant,p.flavor,p.type,Math.round(p.size)].map(function(x){return String(x).trim().toLowerCase()}).join("|")===key})[0];
+      ex=bx||ex;
       if(ex){f.pid=ex.id;f.brand=ex.brand;f.variant=ex.variant;f.flavor=ex.flavor;f.type=ex.type;f.size=ex.size}
     }
     closeModal();S.tab="feed";S.det=null;submitCheckin(f);toast("Check-in geplaatst");
@@ -839,26 +849,35 @@ function badgeData(u){
   var likes=D.likes.filter(function(l){return mine[l.post]&&l.uid!==u}).length,cms=D.comments.filter(function(x){return x.uid===u}).length,fols=D.follows.filter(function(f){return f.to===u}).length;
   var n=ps.length,nb=keys(b).length,nc=keys(c).length,nl=keys(ctr).length;
   return [
-    {i:"🥔",n:"Eerste check-in",d:"Check je eerste chips in",v:n,g:1},
-    {i:"🍟",n:"Chipsliefhebber",d:"10 check-ins",v:n,g:10},
-    {i:"🔥",n:"Chipsfanaat",d:"50 check-ins",v:n,g:50},
-    {i:"👑",n:"Chipslegende",d:"100 check-ins",v:n,g:100},
-    {i:"🏷️",n:"Merkenjager",d:"5 verschillende merken",v:nb,g:5},
-    {i:"🎖️",n:"Merkenkenner",d:"15 verschillende merken",v:nb,g:15},
-    {i:"🧭",n:"Smaakontdekker",d:"10 verschillende chips",v:nc,g:10},
-    {i:"🔬",n:"Smaakexpert",d:"30 verschillende chips",v:nc,g:30},
-    {i:"🌍",n:"Wereldreiziger",d:"Check in in 3 landen (met locatie)",v:nl,g:3},
-    {i:"📸",n:"Fotograaf",d:"10 check-ins met foto",v:foto,g:10},
-    {i:"✍️",n:"Recensent",d:"10 recensies geschreven",v:rev,g:10},
-    {i:"👍",n:"Populair",d:"25 likes op je check-ins",v:likes,g:25},
-    {i:"💬",n:"Gesprekstarter",d:"10 reacties geplaatst",v:cms,g:10},
-    {i:"🤝",n:"Netwerker",d:"5 volgers",v:fols,g:5}
+    {i:"🥔",n:"Eerste check-in",d:"Plaats je eerste check-in.",v:n,g:1},
+    {i:"🍟",n:"Chipsliefhebber",d:"Plaats 10 check-ins.",v:n,g:10},
+    {i:"🔥",n:"Chipsfanaat",d:"Plaats 50 check-ins.",v:n,g:50},
+    {i:"👑",n:"Chipslegende",d:"Plaats 100 check-ins.",v:n,g:100},
+    {i:"🏷️",n:"Merkenjager",d:"Check chips in van 5 verschillende merken.",v:nb,g:5},
+    {i:"🎖️",n:"Merkenkenner",d:"Check chips in van 15 verschillende merken.",v:nb,g:15},
+    {i:"🧭",n:"Smaakontdekker",d:"Check 10 verschillende chips in. Elke chips telt één keer, ook als je hem vaker incheckt.",v:nc,g:10},
+    {i:"🔬",n:"Smaakexpert",d:"Check 30 verschillende chips in. Elke chips telt één keer.",v:nc,g:30},
+    {i:"🌍",n:"Wereldreiziger",d:"Check in met je locatie aan in 3 verschillende landen. De plaatsnaam bij je check-in bepaalt het land.",v:nl,g:3},
+    {i:"📸",n:"Fotograaf",d:"Plaats 10 check-ins met een foto.",v:foto,g:10},
+    {i:"✍️",n:"Recensent",d:"Schrijf bij 10 check-ins een recensie.",v:rev,g:10},
+    {i:"👍",n:"Populair",d:"Krijg in totaal 25 likes op je check-ins.",v:likes,g:25},
+    {i:"💬",n:"Gesprekstarter",d:"Plaats 10 reacties op check-ins van anderen of jezelf.",v:cms,g:10},
+    {i:"🤝",n:"Netwerker",d:"Krijg 5 volgers.",v:fols,g:5}
   ];
 }
+var BGOPEN=false;try{BGOPEN=localStorage.getItem("cs_bgo")==="1"}catch(e){}
 function badgesHtml(u){
-  var l=badgeData(u),got=l.filter(function(x){return x.v>=x.g}).length;
+  var l=badgeData(u),got=l.filter(function(x){return x.v>=x.g}).length,earned=l.filter(function(x){return x.v>=x.g});
   l.sort(function(a,b){return (b.v>=b.g?1:0)-(a.v>=a.g?1:0)||(b.v/b.g)-(a.v/a.g)});
-  return '<div class="card"><div class="name" style="margin-bottom:10px">Badges ('+got+'/'+l.length+')</div><div class="bgs">'+l.map(function(x){var ok=x.v>=x.g;return '<div class="bg'+(ok?"":" lock")+'" title="'+esc(x.d)+'"><span class="bi">'+x.i+'</span><b>'+esc(x.n)+'</b><small>'+(ok?"Behaald":Math.min(x.v,x.g)+"/"+x.g)+'</small></div>'}).join("")+'</div></div>';
+  var h='<div class="card"><div class="row"><button class="grow" data-bt="1" aria-expanded="'+(BGOPEN?"true":"false")+'" aria-label="Badges in- of uitklappen" style="text-align:left;background:none;border:0;font:inherit;color:inherit;padding:0;cursor:pointer;display:flex;align-items:center;gap:8px"><span class="name">Badges ('+got+'/'+l.length+')</span><span style="font-size:.9rem;transition:transform .2s;display:inline-block;transform:rotate('+(BGOPEN?"180":"0")+'deg)">▾</span></button><button class="btn ghost sm" data-bi="'+esc(u)+'" aria-label="Uitleg over de badges">Uitleg</button></div>';
+  if(!BGOPEN)return h+'<div class="bprev" style="margin-top:8px;font-size:1.5rem;display:flex;gap:6px;flex-wrap:wrap">'+(earned.length?earned.map(function(x){return '<span title="'+esc(x.n)+'">'+x.i+'</span>'}).join(""):'<span class="meta" style="font-size:.85rem">Nog geen badges behaald. Tik om je voortgang te zien.</span>')+'</div></div>';
+  return h+'<div class="bgs" style="margin-top:10px">'+l.map(function(x){var ok=x.v>=x.g;return '<div class="bg'+(ok?"":" lock")+'" title="'+esc(x.d)+'"><span class="bi">'+x.i+'</span><b>'+esc(x.n)+'</b><small>'+(ok?"Behaald":Math.min(x.v,x.g)+"/"+x.g)+'</small></div>'}).join("")+'</div></div>';
+}
+function openBadgeInfo(u){
+  var l=badgeData(u),got=l.filter(function(x){return x.v>=x.g}).length,m=$("modal");
+  m.innerHTML='<div class="modal" id="ov"><div class="sheet" role="dialog" aria-label="Uitleg badges"><div class="row"><div class="name grow">Badges uitgelegd</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div><p class="meta" style="margin:6px 0 10px">Je verdient badges door chips in te checken en mee te doen. '+(u===uid?"Je hebt":"Deze gebruiker heeft")+' er '+got+' van de '+l.length+'.</p>'
+   +l.map(function(x){var ok=x.v>=x.g,pc=Math.min(100,Math.round(x.v/x.g*100));return '<div class="card" style="padding:12px;margin:8px 0"><div class="row"><span style="font-size:1.8rem'+(ok?'':';filter:grayscale(1);opacity:.55')+'">'+x.i+'</span><div class="grow"><b>'+esc(x.n)+(ok?' ✓':'')+'</b><div class="meta">'+esc(x.d)+'</div></div></div><div style="height:8px;border-radius:99px;background:#ececea;margin-top:10px;overflow:hidden"><div style="height:100%;width:'+pc+'%;background:#f2a900;border-radius:99px"></div></div><div class="meta" style="margin-top:4px">'+(ok?"Behaald":Math.min(x.v,x.g)+" van "+x.g)+'</div></div>'}).join("")+'</div></div>';
+  $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
 }
 /* zoeken: filters */
 var FLAV=[
@@ -1188,6 +1207,8 @@ document.addEventListener("click",function(e){
   else if(d.delp){if(confirm("Deze check-in verwijderen?"))del("posts",d.delp)}
   else if(d.rp){var rp=d.rp.split(":");openReport(rp[0],rp[1])}
   else if(d.priv){openPrivacy()}
+  else if(d.bi){openBadgeInfo(d.bi)}
+  else if(d.bt){BGOPEN=!BGOPEN;try{localStorage.setItem("cs_bgo",BGOPEN?"1":"0")}catch(e){}render()}
   else if(d.zf){zfModal()}
   else if(d.zr){S.zf=null;render()}
   else if(d.scan)scan("reader",function(c){S.q=c;render()});
