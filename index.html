@@ -284,7 +284,7 @@ async function loadAll(){
   var r=await Promise.all(T.map(function(t){var q=SB.from(t).select("*");if(t==="checkins"||t==="comments")q=q.order("created_at",{ascending:false}).limit(1000);return q}));
   for(var i=0;i<r.length;i++)if(r[i].error)throw r[i].error;
   var g=function(k){return r[k].data||[]},ms=function(x){return +new Date(x)};
-  D.profiles=g(0).map(function(x){return{id:x.id,username:x.username,first:x.first_name||"",last:x.last_name||"",avatar:x.avatar_url||"",admin:!!x.is_admin}});PM={};D.profiles.forEach(function(p){PM[p.id]=p});
+  D.profiles=g(0).map(function(x){return{id:x.id,username:x.username,first:x.first_name||"",last:x.last_name||"",avatar:x.avatar_url||"",admin:!!x.is_admin,country:x.country||""}});PM={};D.profiles.forEach(function(p){PM[p.id]=p});
   D.products=g(1).map(function(x){return{id:x.id,code:x.barcode||"",brand:x.brand,variant:x.variant||"",flavor:x.flavor,type:x.type||"",size:+x.size_g,uid:x.created_by,ts:ms(x.created_at)}});PR={};D.products.forEach(function(p){PR[p.id]=p});
   D.posts=g(2).map(function(x){return mkPost({id:x.id,uid:x.user_id,pid:x.product_id,taste:x.taste==null?null:+x.taste,tex:x.texture==null?null:+x.texture,rating:+x.rating,img:x.photo||"",text:x.review||"",ts:ms(x.created_at)},PR[x.product_id])});
   D.likes=g(3).map(function(x){return{id:safe(x.checkin_id+"_"+x.user_id),post:x.checkin_id,uid:x.user_id,ts:ms(x.created_at)}});
@@ -364,13 +364,13 @@ async function submitCheckin(f){
     return SB.from("checkins").insert({product_id:pid,rating:f.rating,taste:f.taste,texture:f.tex,photo:url,review:f.text||null});
   });
 }
-async function saveProfile(first,last,avatarData){
+async function saveProfile(first,last,avatarData,country){
   var p=PM[uid];if(!p)return;
-  p.first=first;p.last=last;if(avatarData)p.avatar=avatarData;render();
+  p.first=first;p.last=last;p.country=country||"";if(avatarData)p.avatar=avatarData;render();
   qrun(async function(){
     var url=PM[uid].avatar;
     if(avatarData&&avatarData.indexOf("data:")===0)url=await upload(avatarData,"avatar")||"";
-    return SB.from("profiles").update({first_name:first||null,last_name:last||null,avatar_url:url||null}).eq("id",uid);
+    return SB.from("profiles").update({first_name:first||null,last_name:last||null,avatar_url:url||null,country:country||null}).eq("id",uid);
   });
 }
 
@@ -532,7 +532,7 @@ function profileHtml(u,tabMode){
   if(!p)return back+'<div class="card">Deze gebruiker is niet gevonden.</div>';
   mine.forEach(function(x){us[x.pid]=1});
   var av=mine.length?mine.reduce(function(s,x){return s+x.rating},0)/mine.length:0,fn=fullname(u),s=mine.length?statusOf(mine.length):null;
-  var h=back+'<div class="card row">'+avatar(u,"big")+'<div class="grow"><div class="name">'+esc(p.username)+(u===uid?" (Jij)":"")+'</div>'+(fn?'<div class="meta">'+esc(fn)+'</div>':'')+''+'</div></div>';
+  var h=back+'<div class="card row">'+avatar(u,"big")+'<div class="grow"><div class="name">'+esc(p.username)+(u===uid?" (Jij)":"")+'</div>'+(fn?'<div class="meta">'+esc(fn)+'</div>':'')+(p.country&&ctName(p.country)?'<div class="meta">'+ctFlag(p.country)+' '+esc(ctName(p.country))+'</div>':'')+'</div></div>';
   if(u===uid)h+='<div class="row" style="margin-bottom:12px"><button class="btn grow" data-edit="1">'+ic("edit")+' Profiel bewerken</button><button class="btn ghost" data-g="logout">Uitloggen</button></div>'+(PM[uid]&&PM[uid].admin?'<button class="btn full" data-adm="1" style="margin-bottom:12px">Beheer chips</button>':'');
   else h+='<button class="btn full" data-fol="'+esc(u)+'" style="margin-bottom:12px">'+(following(u)?"Volgend ✓":"Volgen")+'</button>';
   h+='<div class="stat"><div><b>'+mine.length+'</b>check-ins</div><div><b>'+keys(us).length+'</b>chips</div><div><b>'+(av?av.toFixed(1):"–")+'</b>gemiddeld</div></div>';
@@ -623,7 +623,7 @@ function openEdit(){
   var p=PM[uid];if(!p)return;var av="",m=$("modal");
   m.innerHTML='<div class="modal" id="ov"><div class="sheet" role="dialog" aria-label="Profiel bewerken"><div class="row"><div class="name grow">Profiel bewerken</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div>'
    +'<div class="row" style="margin:12px 0"><span class="av big" id="epv">'+(imgOk(p.avatar)?'<img alt="" src="'+imgOk(p.avatar)+'">':esc(p.username.charAt(0).toUpperCase()))+'</span><button class="btn ghost" id="epk">Profielfoto wijzigen</button></div>'
-   +'<label for="efn">Voornaam</label><input id="efn" maxlength="40" value="'+esc(p.first)+'" autocomplete="given-name"><label for="eln">Achternaam</label><input id="eln" maxlength="40" value="'+esc(p.last)+'" autocomplete="family-name">'
+   +'<label for="efn">Voornaam</label><input id="efn" maxlength="40" value="'+esc(p.first)+'" autocomplete="given-name"><label for="eln">Achternaam</label><input id="eln" maxlength="40" value="'+esc(p.last)+'" autocomplete="family-name"><label for="cty">Land waar je woont</label>'+ctBox(p.country)
    +'<label for="eun">Gebruikersnaam</label><input id="eun" value="'+esc(p.username)+'" disabled><p class="meta" style="margin:4px 0 0">Je gebruikersnaam is uniek en kun je niet wijzigen.</p>'
    +'<div style="margin-top:18px;padding-top:6px;border-top:1px solid var(--line)"><div class="name" style="font-size:1.05rem;margin-top:10px">Wachtwoord wijzigen</div><label for="pw1">Nieuw wachtwoord</label><input id="pw1" type="password" autocomplete="new-password" placeholder="Minstens 6 tekens"><label for="pw2">Herhaal nieuw wachtwoord</label><input id="pw2" type="password" autocomplete="new-password"><p class="meta" id="pwm" style="margin:6px 0 0;min-height:1.2em" role="status"></p><button class="btn full" id="pwok" style="margin-top:8px">Wachtwoord wijzigen</button></div>'
    +'<div class="row" style="margin-top:14px"><button class="btn ghost" id="ecx">Annuleer</button><button class="btn grow" id="eok">Opslaan</button></div></div></div>';
@@ -641,7 +641,7 @@ function openEdit(){
   $("epk").onclick=function(){photoPicker(true,320,function(u){av=u;$("epv").innerHTML='<img alt="" src="'+u+'">'})};
   function close(){closeModal()}
   $("cx").onclick=close;$("ecx").onclick=close;$("ov").onclick=function(e){if(e.target.id==="ov")close()};
-  $("eok").onclick=function(){saveProfile($("efn").value.trim(),$("eln").value.trim(),av);close();toast("Profiel opgeslagen")};
+  $("eok").onclick=function(){var tx=$("cty").value.trim(),cc=CT.code||ctExact(tx);if(tx&&!cc){toast("Kies je land uit de lijst");return}saveProfile($("efn").value.trim(),$("eln").value.trim(),av,cc);close();toast("Profiel opgeslagen")};
 }
 function filterModal(){
   var m=$("modal"),w=S.flt?JSON.parse(JSON.stringify(S.flt)):{min:0,max:5,from:null,to:null,brands:{},flavors:{},sort:"recent"};
@@ -761,6 +761,45 @@ function scan(el,cb){
   s.start({facingMode:"environment"},{fps:10,qrbox:{width:250,height:120}},function(t){stopScan();cb(t)},function(){}).catch(function(){scanner=null;toast("Camera niet beschikbaar. Typ de barcode in.")});
 }
 
+/* ---------- landkeuze met zoeklijst ---------- */
+var CT_RAW="AD|Andorra|Andorra;AE|Verenigde Arabische Emiraten|United Arab Emirates;AF|Afghanistan|Afghanistan;AG|Antigua en Barbuda|Antigua & Barbuda;AI|Anguilla|Anguilla;AL|Albanië|Albania;AM|Armenië|Armenia;AO|Angola|Angola;AQ|Antarctica|Antarctica;AR|Argentinië|Argentina;AS|Amerikaans-Samoa|American Samoa;AT|Oostenrijk|Austria;AU|Australië|Australia;AW|Aruba|Aruba;AX|Åland|Åland Islands;AZ|Azerbeidzjan|Azerbaijan;BA|Bosnië en Herzegovina|Bosnia & Herzegovina;BB|Barbados|Barbados;BD|Bangladesh|Bangladesh;BE|België|Belgium;BF|Burkina Faso|Burkina Faso;BG|Bulgarije|Bulgaria;BH|Bahrein|Bahrain;BI|Burundi|Burundi;BJ|Benin|Benin;BL|Saint-Barthélemy|St. Barthélemy;BM|Bermuda|Bermuda;BN|Brunei|Brunei;BO|Bolivia|Bolivia;BQ|Caribisch Nederland|Caribbean Netherlands;BR|Brazilië|Brazil;BS|Bahama’s|Bahamas;BT|Bhutan|Bhutan;BV|Bouveteiland|Bouvet Island;BW|Botswana|Botswana;BY|Belarus|Belarus;BZ|Belize|Belize;CA|Canada|Canada;CC|Cocoseilanden|Cocos (Keeling) Islands;CD|Congo-Kinshasa|Congo - Kinshasa;CF|Centraal-Afrikaanse Republiek|Central African Republic;CG|Congo-Brazzaville|Congo - Brazzaville;CH|Zwitserland|Switzerland;CI|Ivoorkust|Côte d’Ivoire;CK|Cookeilanden|Cook Islands;CL|Chili|Chile;CM|Kameroen|Cameroon;CN|China|China;CO|Colombia|Colombia;CR|Costa Rica|Costa Rica;CU|Cuba|Cuba;CV|Kaapverdië|Cape Verde;CW|Curaçao|Curaçao;CX|Christmaseiland|Christmas Island;CY|Cyprus|Cyprus;CZ|Tsjechië|Czechia;DE|Duitsland|Germany;DJ|Djibouti|Djibouti;DK|Denemarken|Denmark;DM|Dominica|Dominica;DO|Dominicaanse Republiek|Dominican Republic;DZ|Algerije|Algeria;EC|Ecuador|Ecuador;EE|Estland|Estonia;EG|Egypte|Egypt;EH|Westelijke Sahara|Western Sahara;ER|Eritrea|Eritrea;ES|Spanje|Spain;ET|Ethiopië|Ethiopia;FI|Finland|Finland;FJ|Fiji|Fiji;FK|Falklandeilanden|Falkland Islands;FM|Micronesia|Micronesia;FO|Faeröer|Faroe Islands;FR|Frankrijk|France;GA|Gabon|Gabon;GB|Verenigd Koninkrijk|United Kingdom;GD|Grenada|Grenada;GE|Georgië|Georgia;GF|Frans-Guyana|French Guiana;GG|Guernsey|Guernsey;GH|Ghana|Ghana;GI|Gibraltar|Gibraltar;GL|Groenland|Greenland;GM|Gambia|Gambia;GN|Guinee|Guinea;GP|Guadeloupe|Guadeloupe;GQ|Equatoriaal-Guinea|Equatorial Guinea;GR|Griekenland|Greece;GS|Zuid-Georgia en Zuidelijke Sandwicheilanden|South Georgia & South Sandwich Islands;GT|Guatemala|Guatemala;GU|Guam|Guam;GW|Guinee-Bissau|Guinea-Bissau;GY|Guyana|Guyana;HK|Hongkong SAR van China|Hong Kong SAR China;HM|Heard en McDonaldeilanden|Heard & McDonald Islands;HN|Honduras|Honduras;HR|Kroatië|Croatia;HT|Haïti|Haiti;HU|Hongarije|Hungary;ID|Indonesië|Indonesia;IE|Ierland|Ireland;IL|Israël|Israel;IM|Isle of Man|Isle of Man;IN|India|India;IO|Brits Indische Oceaanterritorium|British Indian Ocean Territory;IQ|Irak|Iraq;IR|Iran|Iran;IS|IJsland|Iceland;IT|Italië|Italy;JE|Jersey|Jersey;JM|Jamaica|Jamaica;JO|Jordanië|Jordan;JP|Japan|Japan;KE|Kenia|Kenya;KG|Kirgizië|Kyrgyzstan;KH|Cambodja|Cambodia;KI|Kiribati|Kiribati;KM|Comoren|Comoros;KN|Saint Kitts en Nevis|St. Kitts & Nevis;KP|Noord-Korea|North Korea;KR|Zuid-Korea|South Korea;KW|Koeweit|Kuwait;KY|Kaaimaneilanden|Cayman Islands;KZ|Kazachstan|Kazakhstan;LA|Laos|Laos;LB|Libanon|Lebanon;LC|Saint Lucia|St. Lucia;LI|Liechtenstein|Liechtenstein;LK|Sri Lanka|Sri Lanka;LR|Liberia|Liberia;LS|Lesotho|Lesotho;LT|Litouwen|Lithuania;LU|Luxemburg|Luxembourg;LV|Letland|Latvia;LY|Libië|Libya;MA|Marokko|Morocco;MC|Monaco|Monaco;MD|Moldavië|Moldova;ME|Montenegro|Montenegro;MF|Saint-Martin|St. Martin;MG|Madagaskar|Madagascar;MH|Marshalleilanden|Marshall Islands;MK|Noord-Macedonië|North Macedonia;ML|Mali|Mali;MM|Myanmar (Birma)|Myanmar (Burma);MN|Mongolië|Mongolia;MO|Macau SAR van China|Macao SAR China;MP|Noordelijke Marianen|Northern Mariana Islands;MQ|Martinique|Martinique;MR|Mauritanië|Mauritania;MS|Montserrat|Montserrat;MT|Malta|Malta;MU|Mauritius|Mauritius;MV|Maldiven|Maldives;MW|Malawi|Malawi;MX|Mexico|Mexico;MY|Maleisië|Malaysia;MZ|Mozambique|Mozambique;NA|Namibië|Namibia;NC|Nieuw-Caledonië|New Caledonia;NE|Niger|Niger;NF|Norfolk|Norfolk Island;NG|Nigeria|Nigeria;NI|Nicaragua|Nicaragua;NL|Nederland|Netherlands;NO|Noorwegen|Norway;NP|Nepal|Nepal;NR|Nauru|Nauru;NU|Niue|Niue;NZ|Nieuw-Zeeland|New Zealand;OM|Oman|Oman;PA|Panama|Panama;PE|Peru|Peru;PF|Frans-Polynesië|French Polynesia;PG|Papoea-Nieuw-Guinea|Papua New Guinea;PH|Filipijnen|Philippines;PK|Pakistan|Pakistan;PL|Polen|Poland;PM|Saint-Pierre en Miquelon|St. Pierre & Miquelon;PN|Pitcairneilanden|Pitcairn Islands;PR|Puerto Rico|Puerto Rico;PS|Palestijnse gebieden|Palestinian Territories;PT|Portugal|Portugal;PW|Palau|Palau;PY|Paraguay|Paraguay;QA|Qatar|Qatar;RE|Réunion|Réunion;RO|Roemenië|Romania;RS|Servië|Serbia;RU|Rusland|Russia;RW|Rwanda|Rwanda;SA|Saoedi-Arabië|Saudi Arabia;SB|Salomonseilanden|Solomon Islands;SC|Seychellen|Seychelles;SD|Soedan|Sudan;SE|Zweden|Sweden;SG|Singapore|Singapore;SH|Sint-Helena|St. Helena;SI|Slovenië|Slovenia;SJ|Spitsbergen en Jan Mayen|Svalbard & Jan Mayen;SK|Slowakije|Slovakia;SL|Sierra Leone|Sierra Leone;SM|San Marino|San Marino;SN|Senegal|Senegal;SO|Somalië|Somalia;SR|Suriname|Suriname;SS|Zuid-Soedan|South Sudan;ST|Sao Tomé en Principe|São Tomé & Príncipe;SV|El Salvador|El Salvador;SX|Sint-Maarten|Sint Maarten;SY|Syrië|Syria;SZ|Eswatini|Eswatini;TC|Turks- en Caicoseilanden|Turks & Caicos Islands;TD|Tsjaad|Chad;TF|Franse Gebieden in de zuidelijke Indische Oceaan|French Southern Territories;TG|Togo|Togo;TH|Thailand|Thailand;TJ|Tadzjikistan|Tajikistan;TK|Tokelau|Tokelau;TL|Oost-Timor|Timor-Leste;TM|Turkmenistan|Turkmenistan;TN|Tunesië|Tunisia;TO|Tonga|Tonga;TR|Turkije|Türkiye;TT|Trinidad en Tobago|Trinidad & Tobago;TV|Tuvalu|Tuvalu;TW|Taiwan|Taiwan;TZ|Tanzania|Tanzania;UA|Oekraïne|Ukraine;UG|Oeganda|Uganda;UM|Kleine afgelegen eilanden van de Verenigde Staten|U.S. Outlying Islands;US|Verenigde Staten|United States;UY|Uruguay|Uruguay;UZ|Oezbekistan|Uzbekistan;VA|Vaticaanstad|Vatican City;VC|Saint Vincent en de Grenadines|St. Vincent & Grenadines;VE|Venezuela|Venezuela;VG|Britse Maagdeneilanden|British Virgin Islands;VI|Amerikaanse Maagdeneilanden|U.S. Virgin Islands;VN|Vietnam|Vietnam;VU|Vanuatu|Vanuatu;WF|Wallis en Futuna|Wallis & Futuna;WS|Samoa|Samoa;YE|Jemen|Yemen;YT|Mayotte|Mayotte;ZA|Zuid-Afrika|South Africa;ZM|Zambia|Zambia;ZW|Zimbabwe|Zimbabwe;XK|Kosovo|Kosovo",CTL=null,CT={code:""};
+function ctNorm(s){return String(s).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim()}
+function ctList(){if(!CTL){CTL=CT_RAW.split(";").map(function(s){var a=s.split("|");return{c:a[0],n:a[1],e:a[2],k:ctNorm(a[1]),ke:ctNorm(a[2])}}).sort(function(a,b){return a.n.localeCompare(b.n,"nl")})}return CTL}
+function ctFlag(c){return c&&/^[A-Z]{2}$/.test(c)?String.fromCodePoint(127397+c.charCodeAt(0),127397+c.charCodeAt(1)):""}
+function ctName(c){var l=ctList();for(var i=0;i<l.length;i++)if(l[i].c===c)return l[i].n;return ""}
+function ctExact(t){var q=ctNorm(t);if(!q)return "";var l=ctList();for(var i=0;i<l.length;i++)if(l[i].k===q||l[i].ke===q)return l[i].c;return ""}
+function ctMatch(t){
+  var q=ctNorm(t);if(!q)return [];var a=[],b=[],c=[];
+  ctList().forEach(function(x){
+    if(x.k.indexOf(q)===0)a.push(x);
+    else if((" "+x.k).indexOf(" "+q)>=0||x.ke.indexOf(q)===0||(" "+x.ke).indexOf(" "+q)>=0)b.push(x);
+    else if(q.length>1&&(x.k.indexOf(q)>=0||x.ke.indexOf(q)>=0))c.push(x);
+  });
+  return a.concat(b,c);
+}
+function ctBox(code){
+  CT.code=code||"";
+  return '<div class="ctw"><input id="cty" autocomplete="off" autocapitalize="none" placeholder="Land waar je woont" aria-label="Land waar je woont" value="'+esc(ctName(CT.code))+'"><div id="ctl" class="ctl" role="listbox" hidden></div></div>';
+}
+function ctShow(){
+  var i=$("cty"),l=$("ctl");if(!i||!l)return;
+  var r=ctMatch(i.value);
+  if(!r.length||(CT.code&&ctName(CT.code)===i.value)){l.hidden=true;l.innerHTML="";return}
+  l.innerHTML=r.slice(0,60).map(function(x){return '<button type="button" class="cto" role="option" data-cc="'+x.c+'">'+ctFlag(x.c)+' '+esc(x.n)+'</button>'}).join("");
+  l.hidden=false;
+}
+function ctPick(c){var i=$("cty");CT.code=c;if(i)i.value=ctName(c);ctShow()}
+document.addEventListener("input",function(e){if(e.target.id==="cty"){CT.code="";ctShow()}});
+document.addEventListener("focusin",function(e){if(e.target.id==="cty")ctShow()});
+document.addEventListener("keydown",function(e){if(e.target.id==="cty"&&e.key==="Enter"){var r=ctMatch(e.target.value);if(r.length){e.preventDefault();ctPick(r[0].c)}}});
+document.addEventListener("click",function(e){
+  var b=e.target.closest&&e.target.closest("[data-cc]");
+  if(b){e.stopImmediatePropagation();ctPick(b.dataset.cc);return}
+  if(!(e.target.closest&&e.target.closest(".ctw"))){var l=$("ctl");if(l)l.hidden=true}
+},true);
+var CSS_CT=".ctw{position:relative}.ctl{max-height:230px;overflow:auto;background:#fff;border:1px solid var(--line,#ececea);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.12);margin-top:4px;text-align:left}.ctl[hidden]{display:none}.cto{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line,#ececea);padding:11px 14px;font:inherit;color:#141414;cursor:pointer}.cto:last-child{border-bottom:0}.cto:hover,.cto:focus{background:var(--soft,#fff4cc)}";
+(function(){var s=document.createElement("style");s.textContent=CSS_CT;document.head.appendChild(s)})();
+
 /* ---------- beheer (alleen beheerders) ---------- */
 var ADM={sel:{},q:""};
 function normName(s){return String(s).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9]/g,"")}
@@ -856,7 +895,7 @@ function gateHtml(){
   if(st==="login")return h+'<div class="gbox"><div class="name">Inloggen</div>'+lg+'<input id="pw" type="password" autocomplete="current-password" placeholder="Wachtwoord" aria-label="Wachtwoord">'+m+'<button class="gb pri" data-g="dologin">Inloggen</button><button class="gl" data-g="forgot">Wachtwoord vergeten?</button><button class="gb" data-g="gback">Terug</button></div>';
   if(st==="forgot")return h+'<div class="gbox"><div class="name">Wachtwoord vergeten</div><p class="meta" style="margin:0 0 10px">Vul je gebruikersnaam of e-mailadres in. Je krijgt een e-mail met een link om een nieuw wachtwoord te kiezen.</p>'+lg+m+'<button class="gb pri" data-g="doforgot">Stuur e-mail</button><button class="gb" data-g="login">Terug naar inloggen</button></div>';
   if(st==="reset")return h+'<div class="gbox"><div class="name">Nieuw wachtwoord kiezen</div><input id="pw" type="password" autocomplete="new-password" placeholder="Nieuw wachtwoord (minstens 6 tekens)" aria-label="Nieuw wachtwoord"><input id="pw2" type="password" autocomplete="new-password" placeholder="Herhaal nieuw wachtwoord" aria-label="Herhaal nieuw wachtwoord">'+m+'<button class="gb pri" data-g="doreset">Wachtwoord opslaan</button></div>';
-  if(st==="register")return h+'<div class="gbox"><div class="name">Account aanmaken</div><input id="un" maxlength="24" autocomplete="off" autocapitalize="none" placeholder="Gebruikersnaam" aria-label="Gebruikersnaam">'+em+'<input id="pw" type="password" autocomplete="new-password" placeholder="Wachtwoord (minstens 6 tekens)" aria-label="Wachtwoord">'+m+'<button class="gb pri" data-g="mk">Account aanmaken</button><button class="gb" data-g="gback">Terug</button></div>';
+  if(st==="register")return h+'<div class="gbox"><div class="name">Account aanmaken</div><input id="un" maxlength="24" autocomplete="off" autocapitalize="none" placeholder="Gebruikersnaam" aria-label="Gebruikersnaam">'+em+'<input id="pw" type="password" autocomplete="new-password" placeholder="Wachtwoord (minstens 6 tekens)" aria-label="Wachtwoord">'+ctBox(CT.code)+m+'<button class="gb pri" data-g="mk">Account aanmaken</button><button class="gb" data-g="gback">Terug</button></div>';
   return h+'<div class="gbox"><button class="gb pri" data-g="login">Inloggen</button><button class="gb" data-g="create">Account aanmaken</button><button class="gl" data-g="guest">Doorgaan als gast</button>'+m+'<p class="meta" style="margin:0;text-align:center">Als gast kun je alles bekijken. Inchecken, liken en reageren vraagt een account.</p></div>';
 }
 function showGate(){var g=$("gate");if(S.gate==="app"){g.style.display="none";g.innerHTML="";pushSync();return}g.style.display="flex";g.innerHTML=gateHtml()}
@@ -865,7 +904,7 @@ async function authAct(a){
   try{
     if(a==="toauth"||a==="gback"){closeModal();S.gate="auth"}
     else if(a==="login")S.gate="login";
-    else if(a==="create")S.gate="register";
+    else if(a==="create"){CT.code="";S.gate="register"}
     else if(a==="guest")S.gate="app";
     else if(a==="forgot")S.gate="forgot";
     else if(a==="doforgot"){
@@ -900,9 +939,10 @@ async function authAct(a){
       if(n.length<3||!/^[A-Za-z0-9_.-]+$/.test(n)||n.length>24)S.gmsg="Gebruikersnaam: 3 tot 24 tekens, letters, cijfers, _ . of -";
       else if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val("em").trim()))S.gmsg="Vul een geldig e-mailadres in.";
       else if(val("pw").length<6)S.gmsg="Kies een wachtwoord van minstens 6 tekens.";
+      else if(!(CT.code||ctExact(val("cty"))))S.gmsg="Kies je land uit de lijst.";
       else if(D.profiles.some(function(q){return q.username.toLowerCase()===n.toLowerCase()}))S.gmsg="Deze gebruikersnaam is al bezet.";
       else{
-        var r2=await SB.auth.signUp({email:val("em").trim(),password:val("pw"),options:{data:{username:n}}});
+        var r2=await SB.auth.signUp({email:val("em").trim(),password:val("pw"),options:{data:{username:n,country:CT.code||ctExact(val("cty"))}}});
         if(r2.error){var m2=r2.error.message||"";S.gmsg=/already|registered/i.test(m2)?"Dit e-mailadres is al in gebruik. Log in of kies een ander adres.":/database/i.test(m2)?"Deze gebruikersnaam is al bezet.":"Account maken mislukt: "+m2}
         else if(r2.data.user&&r2.data.user.identities&&!r2.data.user.identities.length)S.gmsg="Dit e-mailadres is al in gebruik. Log in of kies een ander adres.";
         else if(!r2.data.session){S.gate="login";S.gmsg="Account gemaakt. Bevestig eerst je e-mail en log daarna in."}
