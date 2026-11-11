@@ -265,6 +265,7 @@ function nid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function toast(m){var t=document.createElement("div");t.className="toast";t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2600)}
 function imgOk(u){return OKIMG.test(u||"")?u:""}
 function fmtG(n){return (Math.round(+n*10)/10)+" g"}
+function placeTag(p){return p&&p.place?' · 📍 '+esc(p.place):''}
 function when(ts){return new Date(ts).toLocaleString("nl-NL",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})}
 function dshort(ts){return new Date(ts).toLocaleDateString("nl-NL",{month:"short",year:"numeric"})}
 function norm(s){return String(s||"").toLowerCase().replace(/['’`´]/g,"")}
@@ -286,7 +287,7 @@ async function loadAll(){
   var g=function(k){return r[k].data||[]},ms=function(x){return +new Date(x)};
   D.profiles=g(0).map(function(x){return{id:x.id,username:x.username,first:x.first_name||"",last:x.last_name||"",avatar:x.avatar_url||"",admin:!!x.is_admin,country:x.country||""}});PM={};D.profiles.forEach(function(p){PM[p.id]=p});
   D.products=g(1).map(function(x){return{id:x.id,code:x.barcode||"",brand:x.brand,variant:x.variant||"",flavor:x.flavor,type:x.type||"",size:+x.size_g,uid:x.created_by,ts:ms(x.created_at)}});PR={};D.products.forEach(function(p){PR[p.id]=p});
-  D.posts=g(2).map(function(x){return mkPost({id:x.id,uid:x.user_id,pid:x.product_id,taste:x.taste==null?null:+x.taste,tex:x.texture==null?null:+x.texture,rating:+x.rating,img:x.photo||"",text:x.review||"",ts:ms(x.created_at)},PR[x.product_id])});
+  D.posts=g(2).map(function(x){return mkPost({id:x.id,uid:x.user_id,pid:x.product_id,taste:x.taste==null?null:+x.taste,tex:x.texture==null?null:+x.texture,rating:+x.rating,img:x.photo||"",text:x.review||"",place:x.place||"",ts:ms(x.created_at)},PR[x.product_id])});
   D.likes=g(3).map(function(x){return{id:safe(x.checkin_id+"_"+x.user_id),post:x.checkin_id,uid:x.user_id,ts:ms(x.created_at)}});
   D.comments=g(4).map(function(x){return{id:x.id,post:x.checkin_id,uid:x.user_id,text:x.body,ts:ms(x.created_at)}});
   D.follows=g(5).map(function(x){return{id:safe(x.follower_id+"_"+x.followed_id),from:x.follower_id,to:x.followed_id}});
@@ -335,10 +336,10 @@ function updateCheckin(id,f){
     if(!ex){ex={id:"tmp"+nid(),code:"",brand:f.brand,variant:f.variant,flavor:f.flavor,type:f.type,size:f.size,uid:uid,ts:Date.now()};PR[ex.id]=ex;D.products.push(ex)}
     p.pid=ex.id;mkPost(p,ex);
   }
-  p.taste=f.taste;p.tex=f.tex;p.rating=f.rating;p.img=f.img;p.text=f.text;render();
+  p.taste=f.taste;p.tex=f.tex;p.rating=f.rating;p.img=f.img;p.text=f.text;p.place=f.place||"";render();
   qrun(async function(){
     var url=f.img||null;if(f.img&&f.img.indexOf("data:")===0)url=await upload(f.img,"chips");
-    var upd={rating:f.rating,taste:f.taste,texture:f.tex,photo:url,review:f.text||null};
+    var upd={rating:f.rating,taste:f.taste,texture:f.tex,photo:url,review:f.text||null,place:f.place||null};
     if(changed){
       var pid=String(ex.id).indexOf("tmp")===0?null:ex.id;
       if(!pid){var r=await SB.rpc("upsert_product",{p_barcode:null,p_brand:f.brand,p_variant:f.variant,p_flavor:f.flavor,p_type:f.type,p_size:f.size});if(r.error)return r;pid=r.data}
@@ -352,7 +353,7 @@ async function submitCheckin(f){
   if(!gate())return;
   var pr=f.pid?PR[f.pid]:null,hadCode=pr&&pr.code;
   if(!pr){pr={id:"tmp"+nid(),code:f.code||"",brand:f.brand,variant:f.variant,flavor:f.flavor,type:f.type,size:f.size,uid:uid,ts:Date.now()};PR[pr.id]=pr;D.products.push(pr)}
-  D.posts.push(mkPost({id:"tmp"+nid(),uid:uid,pid:pr.id,taste:f.taste,tex:f.tex,rating:f.rating,img:f.img,text:f.text,ts:Date.now()},pr));
+  D.posts.push(mkPost({id:"tmp"+nid(),uid:uid,pid:pr.id,taste:f.taste,tex:f.tex,rating:f.rating,img:f.img,text:f.text,place:f.place||"",ts:Date.now()},pr));
   render();
   qrun(async function(){
     var pid=f.pid;
@@ -361,7 +362,7 @@ async function submitCheckin(f){
       if(r.error)return r;pid=r.data;
     }
     var url=f.img&&f.img.indexOf("data:")!==0?f.img:null;if(f.img&&f.img.indexOf("data:")===0)url=await upload(f.img,"chips");
-    return SB.from("checkins").insert({product_id:pid,rating:f.rating,taste:f.taste,texture:f.tex,photo:url,review:f.text||null});
+    return SB.from("checkins").insert({product_id:pid,rating:f.rating,taste:f.taste,texture:f.tex,photo:url,review:f.text||null,place:f.place||null});
   });
 }
 async function saveProfile(first,last,avatarData,country){
@@ -419,7 +420,7 @@ function infoRows(pr){
 function srow(l,v){return '<div class="srow"><span>'+l+'</span>'+stars(v)+'</div>'}
 function cardHtml(p){
   var c=cms(p.id),im=imgOk(p.img),mine=p.uid===uid,h;
-  h='<article class="card"><div class="row">'+avatar(p.uid)+'<div class="grow">'+nameBtn(p.uid)+'<div class="meta">'+when(p.ts)+'</div></div>'+(mine?'<button class="act" data-edp="'+p.id+'" aria-label="Aanpassen">'+ic("edit")+'</button><button class="act" data-delp="'+p.id+'" aria-label="Verwijder">'+ic("trash")+'</button>':'<button class="act'+(following(p.uid)?" on":"")+'" data-fol="'+esc(p.uid)+'">'+(following(p.uid)?"Volgend":"Volgen")+'</button>')+'</div>';
+  h='<article class="card"><div class="row">'+avatar(p.uid)+'<div class="grow">'+nameBtn(p.uid)+'<div class="meta">'+when(p.ts)+placeTag(p)+'</div></div>'+(mine?'<button class="act" data-edp="'+p.id+'" aria-label="Aanpassen">'+ic("edit")+'</button><button class="act" data-delp="'+p.id+'" aria-label="Verwijder">'+ic("trash")+'</button>':'<button class="act'+(following(p.uid)?" on":"")+'" data-fol="'+esc(p.uid)+'">'+(following(p.uid)?"Volgend":"Volgen")+'</button>')+'</div>';
   h+='<button class="media" data-chip="'+p.pid+'" aria-label="Bekijk '+esc(p.flavor)+'">'+(im?'<div class="mbg" style="background-image:url('+im+')"></div><img alt="" src="'+im+'">':'')+'<span class="mt">'+esc(p.flavor)+'</span></button>';
   h+='<div class="info">'+infoRows(p)+'</div>';
   if(p.taste!=null)h+=srow("Smaak",p.taste);
@@ -431,7 +432,7 @@ function cardHtml(p){
 }
 function miniCard(p){
   var im=imgOk(p.img);
-  return '<div class="card"><div class="row">'+avatar(p.uid,"sm")+'<div class="grow">'+nameBtn(p.uid)+'<div class="meta">'+when(p.ts)+'</div></div><div style="text-align:right">'+stars(p.rating)+'<div><b>'+p.rating.toFixed(1)+'</b></div></div></div>'
+  return '<div class="card"><div class="row">'+avatar(p.uid,"sm")+'<div class="grow">'+nameBtn(p.uid)+'<div class="meta">'+when(p.ts)+placeTag(p)+'</div></div><div style="text-align:right">'+stars(p.rating)+'<div><b>'+p.rating.toFixed(1)+'</b></div></div></div>'
    +(p.taste!=null?'<div class="meta" style="margin-top:6px">Smaak '+p.taste.toFixed(1)+' · Textuur '+(p.tex==null?"–":p.tex.toFixed(1))+'</div>':'')
    +(p.text?'<p class="rev" style="margin:6px 0 0">'+esc(p.text)+'</p>':'')
    +(im?'<img alt="" src="'+im+'" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:8px">':'')
@@ -693,13 +694,23 @@ function openCode(){
   $("nobc").onclick=function(){stopScan();closeModal();openForm(null)};
   $("cx").onclick=close;$("ov").onclick=function(e){if(e.target.id==="ov")close()};
 }
+function getPlace(cb){
+  if(!navigator.geolocation){cb("","Locatie wordt niet ondersteund op dit apparaat.");return}
+  navigator.geolocation.getCurrentPosition(function(pos){
+    fetch("https://nominatim.openstreetmap.org/reverse?format=jsonv2&zoom=10&addressdetails=1&accept-language=nl&lat="+pos.coords.latitude+"&lon="+pos.coords.longitude)
+      .then(function(r){return r.json()})
+      .then(function(j){var a=(j&&j.address)||{},c=a.city||a.town||a.village||a.municipality||a.county||a.state||"",t=[c,a.country].filter(Boolean).join(", ").slice(0,80);t?cb(t,""):cb("","Plaatsnaam niet gevonden.")})
+      .catch(function(){cb("","Plaatsnaam ophalen mislukt. Controleer je internetverbinding.")});
+  },function(e){cb("",e&&e.code===1?"Locatie staat uit. Geef Chipstrack toestemming in de instellingen van je telefoon of browser.":"Locatie ophalen mislukt. Probeer het opnieuw.")},{timeout:10000,maximumAge:600000});
+}
+function locPref(v){try{if(v===undefined)return localStorage.getItem("cs_loc")==="1";localStorage.setItem("cs_loc",v?"1":"0")}catch(e){return false}}
 function openForm(code,pid,epid){
   var pr=pid?PR[pid]:(code?D.products.filter(function(p){return p.code===code})[0]:null),m=$("modal"),img="",manual=false;
   var ep=epid?D.posts.filter(function(x){return x.id===epid})[0]:null;
   if(epid&&(!ep||ep.uid!==uid||!PR[ep.pid]))return;
   var epr=null;
   if(ep){epr=PR[ep.pid];pr=null;code="";img=imgOk(ep.img)||"";manual=true}
-  var carried=false;
+  var carried=false,place=ep?(ep.place||""):"",lmsg="",lbusy=false;
   if(!ep&&pr){var lp=D.posts.filter(function(x){return x.pid===pr.id&&imgOk(x.img)}).sort(function(a,b){return b.ts-a.ts})[0];if(lp){img=imgOk(lp.img);carried=true}}
   function list(k){var o={};D.products.forEach(function(p){if(p[k])o[p[k]]=1});return keys(o).map(function(x){return '<option value="'+esc(x)+'">'}).join("")}
   function rate(id,label,v){return '<div class="srow" style="padding:10px 0 0"><span>'+label+'</span><span id="'+id+'s"></span><b id="'+id+'v"></b></div><input type="range" id="'+id+'" min="0.5" max="5" step="0.5" value="'+v+'" aria-label="'+label+'">'}
@@ -714,6 +725,7 @@ function openForm(code,pid,epid){
    +'<div class="card" style="margin-top:12px">'+rate("rt","Smaak",ep&&ep.taste!=null?ep.taste:3)+rate("rx","Textuur",ep&&ep.tex!=null?ep.tex:3)
    +'<div class="tot"><div class="row"><b class="grow">TOTAAL</b><b class="tn" id="rov"></b></div><div id="ros" class="st big" style="margin:6px 0"></div><input type="range" id="ro" min="0.5" max="5" step="0.5" value="'+(ep?ep.rating:3)+'" aria-label="Totaal"></div>'
    +'<label>Foto (optioneel)</label><button class="btn ghost" id="pp">Foto toevoegen</button><div id="pv"></div>'
+   +'<label>Locatie (optioneel)</label><div id="lcw"></div>'
    +'<label for="fx">Recensie (optioneel)</label><textarea id="fx" rows="3" maxlength="450" placeholder="Schrijf hier je reactie..."></textarea><div class="meta" style="text-align:right" id="fcnt">0/450</div></div>'
    +'<button class="btn full" id="ok">'+(ep?"Opslaan":"Versturen")+'</button></div></div>';
   function show(id,v){$(id+"s").innerHTML=stars(v);$(id+"v").textContent=(+v).toFixed(1)}
@@ -723,16 +735,29 @@ function openForm(code,pid,epid){
   $("pp").onclick=function(){photoPicker(false,900,function(u){img=u;$("pv").innerHTML='<div class="pv"><img alt="Gekozen foto" src="'+u+'"><button class="btn ghost sm" id="prm">Verwijderen</button></div>';$("prm").onclick=function(){img="";$("pv").innerHTML=""}})};
   if(ep){$("fx").value=ep.text||"";$("fcnt").textContent=$("fx").value.length+"/450";if(img){$("pv").innerHTML='<div class="pv"><img alt="Gekozen foto" src="'+img+'"><button class="btn ghost sm" id="prm">Verwijderen</button></div>';$("prm").onclick=function(){img="";$("pv").innerHTML=""}}}
   if(carried&&img){$("pv").innerHTML='<div class="pv"><img alt="Foto van eerdere check-in" src="'+img+'"><button class="btn ghost sm" id="prm">Verwijderen</button></div><p class="meta" style="margin:6px 0 0">Foto van een eerdere check-in. Vervang of verwijder hem als je een eigen foto hebt.</p>';$("prm").onclick=function(){img="";$("pv").innerHTML=""}}
+  function lcDraw(){
+    var w=$("lcw");if(!w)return;
+    if(place)w.innerHTML='<div class="row"><span class="grow">📍 '+esc(place)+'</span><button type="button" class="btn ghost sm" id="lcx">Verwijderen</button></div>';
+    else if(ep)w.innerHTML='<p class="meta" style="margin:0">Geen locatie bij deze check-in.</p>';
+    else w.innerHTML='<button type="button" class="btn ghost" id="lcb"'+(lbusy?" disabled":"")+'>'+(lbusy?"Locatie ophalen...":"📍 Locatie toevoegen")+'</button><p class="meta" style="margin:6px 0 0" role="status">'+esc(lmsg||"Alleen de plaatsnaam wordt bij je check-in getoond, nooit je exacte positie.")+'</p>';
+    var b=$("lcb"),x=$("lcx");
+    if(b)b.onclick=function(){lbusy=true;lmsg="";lcDraw();getPlace(function(t,err){lbusy=false;place=t;lmsg=err;if(t)locPref(true);lcDraw()})};
+    if(x)x.onclick=function(){place="";lmsg="";if(!ep)locPref(false);lcDraw()};
+  }
+  lcDraw();
+  if(!ep&&locPref()&&navigator.permissions&&navigator.permissions.query){
+    navigator.permissions.query({name:"geolocation"}).then(function(s){if(s.state==="granted"&&!place&&$("lcw")){lbusy=true;lcDraw();getPlace(function(t,err){lbusy=false;if($("lcw")){place=t;lmsg=err;lcDraw()}})}}).catch(function(){});
+  }
   function close(){closeModal()}
   $("cx").onclick=close;$("ov").onclick=function(e){if(e.target.id==="ov")close()};
   $("ok").onclick=function(){
     if(ep){
-      var g={img:img,text:$("fx").value.trim(),taste:+$("rt").value,tex:+$("rx").value,rating:+$("ro").value,brand:$("fb").value.trim(),variant:$("fv").value.trim(),flavor:$("ff").value.trim(),type:$("ft").value.trim(),size:parseFloat($("fs").value)};
+      var g={place:place,img:img,text:$("fx").value.trim(),taste:+$("rt").value,tex:+$("rx").value,rating:+$("ro").value,brand:$("fb").value.trim(),variant:$("fv").value.trim(),flavor:$("ff").value.trim(),type:$("ft").value.trim(),size:parseFloat($("fs").value)};
       if(!g.brand||!g.flavor){toast("Vul merk en smaak in");return}
       if(!(g.size>0)){toast("Vul de verpakking in gram in");return}
       if(updateCheckin(ep.id,g)){closeModal();toast("Check-in aangepast")}return;
     }
-    var f={code:code||"",img:img,text:$("fx").value.trim(),taste:+$("rt").value,tex:+$("rx").value,rating:+$("ro").value};
+    var f={code:code||"",place:place,img:img,text:$("fx").value.trim(),taste:+$("rt").value,tex:+$("rx").value,rating:+$("ro").value};
     if(pr){f.pid=pr.id;f.brand=pr.brand;f.variant=pr.variant;f.flavor=pr.flavor;f.type=pr.type;f.size=pr.size}
     else{
       f.brand=$("fb").value.trim();f.variant=$("fv").value.trim();f.flavor=$("ff").value.trim();f.type=$("ft").value.trim();f.size=parseFloat($("fs").value);
