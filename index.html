@@ -7,6 +7,7 @@
 var SUPABASE_URL="https://cjnixgeeqsezrepwkwfm.supabase.co",SUPABASE_ANON_KEY="sb_publishable_7_ECMcbL-K_Ma-EvzBVeqw_EfH9EgKC";
 // Optioneel: je e-mailadres voor vragen over privacy (komt in de privacyverklaring)
 var PRIVACY_EMAIL="rickvanweerden@gmail.com";
+var COPYRIGHT_HOLDER="Rick van Weerden";
 // =====================================================================
 </script>
 <meta name="theme-color" content="#ffc20e">
@@ -15,6 +16,7 @@ var PRIVACY_EMAIL="rickvanweerden@gmail.com";
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chipstrack</title>
+<meta name="copyright" content="Chipstrack. Alle rechten voorbehouden.">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@400;600;800&display=swap">
 <style>
 :root{--bg:#fff;--card:#ffc20e;--ink:#141414;--soft:#ffd84d;--onbg:#141414;box-sizing:border-box}
@@ -576,7 +578,7 @@ function render(){
   else if(S.tab==="zoek")h=zoekHtml();
   else if(S.tab==="rank")h=rankHtml();
   else h=profileHtml(uid,true);
-  $("view").innerHTML=h;
+  $("view").innerHTML=h+copyHtml();
   $("nav").innerHTML=navHtml();
   if(openCmId)renderCm();
 }
@@ -884,40 +886,81 @@ var CSS_CT=".ctw{position:relative}.ctl{max-height:230px;overflow:auto;backgroun
 /* ---------- v5 begin ---------- */
 /* badges */
 function placeCountry(pl){var a=String(pl||"").split(",");return a.length>1?ctNorm(a[a.length-1]):""}
+var BCATS=[["n","Check-ins"],["c","Verschillende chips"],["m","Merken"],["s","Smaakrichtingen"],["w","Reizen en plaatsen"],["f","Foto's en recensies"],["b","Beoordelingen"],["x","Sociaal"],["t","Streaks en tempo"],["a","Chips toevoegen"]];
+var BN_N=[[1,"Eerste check-in","🥔"],[5,"Warming-up","🥨"],[10,"Chipsliefhebber","🍟"],[25,"Vaste klant","🛒"],[50,"Chipsfanaat","🔥"],[75,"Knabbelaar","😋"],[100,"Chipslegende","👑"],[150,"Zakkenvuller","🎒"],[200,"Chipsmeester","🏅"],[250,"Kwart naar duizend","🎯"],[300,"Chipsgeleerde","🎓"],[400,"Knabbelkampioen","🏆"],[500,"Halve duizend","🌟"],[600,"Chipsprofessor","🧑‍🏫"],[700,"Onverzadigbaar","💥"],[800,"Chipsgrootmeester","🥇"],[900,"Bijna daar","🚀"],[1000,"Duizend check-ins","💎"]];
+var BN_C=[[1,"Eerste smaak","🥔"],[5,"Proeverij","🥄"],[10,"Smaakontdekker","🧭"],[20,"Smaakzoeker","🔎"],[30,"Smaakexpert","🔬"],[50,"Smaaksommelier","🍷"],[75,"Smaakcollectie","🗂️"],[100,"Honderd smaken","💯"],[150,"Smaakencyclopedie","📚"],[200,"Smaakarchivaris","🏛️"],[250,"Smaakprofessor","🧪"],[300,"Smaakgrootmeester","🧙"],[350,"Smaaklegende","🦄"],[400,"Smaakmythe","🐉"],[450,"Bijna alle smaken","🌈"],[500,"Vijfhonderd smaken","👑"]];
+function bTier(i,len){return ["🥉","🥈","🥇","🏅","💎"][Math.min(4,Math.floor(i*5/len))]}
 function badgeData(u){
-  var ps=D.posts.filter(function(x){return x.uid===u}),b={},c={},ctr={},foto=0,rev=0,mine={};
-  ps.forEach(function(x){b[normName(x.brand)]=1;c[x.pid]=1;if(imgOk(x.img))foto++;if(x.text)rev++;mine[x.id]=1;var k=placeCountry(x.place);if(k)ctr[k]=1});
-  var likes=D.likes.filter(function(l){return mine[l.post]&&l.uid!==u}).length,cms=D.comments.filter(function(x){return x.uid===u}).length,fols=D.follows.filter(function(f){return f.to===u}).length;
-  var n=ps.length,nb=keys(b).length,nc=keys(c).length,nl=keys(ctr).length;
-  return [
-    {i:"🥔",n:"Eerste check-in",d:"Plaats je eerste check-in.",v:n,g:1},
-    {i:"🍟",n:"Chipsliefhebber",d:"Plaats 10 check-ins.",v:n,g:10},
-    {i:"🔥",n:"Chipsfanaat",d:"Plaats 50 check-ins.",v:n,g:50},
-    {i:"👑",n:"Chipslegende",d:"Plaats 100 check-ins.",v:n,g:100},
-    {i:"🏷️",n:"Merkenjager",d:"Check chips in van 5 verschillende merken.",v:nb,g:5},
-    {i:"🎖️",n:"Merkenkenner",d:"Check chips in van 15 verschillende merken.",v:nb,g:15},
-    {i:"🧭",n:"Smaakontdekker",d:"Check 10 verschillende chips in. Elke chips telt één keer, ook als je hem vaker incheckt.",v:nc,g:10},
-    {i:"🔬",n:"Smaakexpert",d:"Check 30 verschillende chips in. Elke chips telt één keer.",v:nc,g:30},
-    {i:"🌍",n:"Wereldreiziger",d:"Check in met je locatie aan in 3 verschillende landen. De plaatsnaam bij je check-in bepaalt het land.",v:nl,g:3},
-    {i:"📸",n:"Fotograaf",d:"Plaats 10 check-ins met een foto.",v:foto,g:10},
-    {i:"✍️",n:"Recensent",d:"Schrijf bij 10 check-ins een recensie.",v:rev,g:10},
-    {i:"👍",n:"Populair",d:"Krijg in totaal 25 likes op je check-ins.",v:likes,g:25},
-    {i:"💬",n:"Gesprekstarter",d:"Plaats 10 reacties op check-ins van anderen of jezelf.",v:cms,g:10},
-    {i:"🤝",n:"Netwerker",d:"Krijg 5 volgers.",v:fols,g:5}
-  ];
+  var ps=D.posts.filter(function(x){return x.uid===u}),b={},bc={},c={},ctr={},pl={},foto=0,rev=0,hi=0,lo=0,mine={},days={},dc={},mc={},cat={};
+  ps.forEach(function(x){
+    var bk=normName(x.brand);b[bk]=1;bc[bk]=(bc[bk]||0)+1;c[x.pid]=1;if(imgOk(x.img))foto++;if(x.text)rev++;mine[x.id]=1;
+    var k=placeCountry(x.place);if(k)ctr[k]=1;if(x.place)pl[x.place]=1;
+    if(x.rating>=5)hi++;if(x.rating<=2)lo++;
+    var d=new Date(x.ts),dn=Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5);days[dn]=1;dc[dn]=(dc[dn]||0)+1;
+    var mk=d.getFullYear()*12+d.getMonth();mc[mk]=(mc[mk]||0)+1;
+    flavCats(x).forEach(function(f){cat[f]=(cat[f]||0)+1});
+  });
+  var likes=D.likes.filter(function(l){return mine[l.post]&&l.uid!==u}).length,cms=D.comments.filter(function(x){return x.uid===u}).length,fols=D.follows.filter(function(f){return f.to===u}).length,fing=D.follows.filter(function(f){return f.from===u}).length;
+  var tgd=D.tags.filter(function(t){return mine[t.post]}).length,tgm=D.tags.filter(function(t){return t.uid===u}).length;
+  var made=D.products.filter(function(p){return p.uid===u}),madeBc=made.filter(function(p){return p.code}).length;
+  var dl=keys(days).map(Number).sort(function(a,b){return a-b}),best=0,run=0,prev=null;
+  dl.forEach(function(x){run=(prev!==null&&x===prev+1)?run+1:1;if(run>best)best=run;prev=x});
+  function mx(o){var m=0;keys(o).forEach(function(k){if(o[k]>m)m=o[k]});return m}
+  var n=ps.length,out=[];
+  function add(cat,list,v,desc,pre,ic){list.forEach(function(t,i){out.push({k:cat,i:t[2]||ic||bTier(i,list.length),n:t[1]||(pre+" "+t[0]),d:desc.replace("#",t[0]),v:v,g:t[0]})})}
+  function L(a,ic){return a.map(function(g,i){return [g,null,null]})}
+  add("n",BN_N,n,"Plaats # check-ins.");
+  add("c",BN_C,keys(c).length,"Check # verschillende chips in. Elke chips telt één keer, ook als je hem vaker incheckt.");
+  add("m",L([1,3,5,10,15,20,30,40,50,75,100]),keys(b).length,"Check chips in van # verschillende merken.","Merken");
+  var fk=FLAV.map(function(f){return f[0]}).concat(["Naturel & zout"]),fi={"Paprika":"🫑","Barbecue":"🍖","Kaas":"🧀","Zure room & ui":"🧅","Zout & azijn":"🧂","Pittig":"🌶️","Kip":"🍗","Zoet":"🍯","Kruiden":"🌿","Naturel & zout":"🥔"};
+  fk.forEach(function(f){[[5,"liefhebber"],[25,"kenner"],[100,"meester"]].forEach(function(t){out.push({k:"s",i:fi[f]||"🥔",n:f+"-"+t[1],d:"Check # chips met smaakrichting "+f+" in.".replace("#",t[0]),v:cat[f]||0,g:t[0]})})});
+  out.forEach(function(x){if(x.k==="s")x.d=x.d.replace("#",x.g)});
+  add("w",L([1,2,3,5,7,10,15,20,30]),keys(ctr).length,"Check in met je locatie aan in # verschillende landen. De plaatsnaam bij je check-in bepaalt het land.","Landen","🌍");
+  add("w",L([1,3,5,10,25,50,100]),keys(pl).length,"Check in op # verschillende plaatsen.","Plaatsen","📍");
+  add("f",L([1,5,10,25,50,100,150,200,300,500]),foto,"Plaats # check-ins met een foto.","Foto's","📸");
+  add("f",L([1,5,10,25,50,100,150,200,300,500]),rev,"Schrijf bij # check-ins een recensie.","Recensies","✍️");
+  add("b",L([1,5,10,25,50,100]),hi,"Geef # keer de volle 5 sterren.","Topscore","⭐");
+  add("b",L([1,5,10,25]),lo,"Geef # keer 2 sterren of minder.","Streng","👎");
+  add("b",L([1,3,10,25,50]),mx(bc),"Check # keer chips van hetzelfde merk in.","Merkentrouw","🏷️");
+  add("x",L([5,10,25,50,100,250,500,1000]),likes,"Krijg in totaal # likes op je check-ins.","Likes","👍");
+  add("x",L([1,5,10,25,50,100,250,500]),cms,"Plaats # reacties op check-ins.","Reacties","💬");
+  add("x",L([1,3,5,10,25,50,100]),fols,"Krijg # volgers.","Volgers","🤝");
+  add("x",L([1,5,10,25]),fing,"Volg # andere gebruikers.","Volgend","👀");
+  add("x",L([1,5,10,25,50,100]),tgd,"Tag # keer een vriend bij je check-in.","Taggen","🏷️");
+  add("x",L([1,5,10,25,50]),tgm,"Word # keer door een vriend getagd.","Getagd","📣");
+  add("t",L([3,7,14,30,60,100]),best,"Check # dagen achter elkaar in.","Streak","🔥");
+  add("t",L([3,5,10]),mx(dc),"Check # keer in op één dag.","Per dag","⚡");
+  add("t",L([10,25,50,100]),mx(mc),"Check # keer in binnen één kalendermaand.","Per maand","📅");
+  add("a",L([1,5,10,25,50,100,250]),made.length,"Voeg # nieuwe chips toe aan de database.","Toegevoegd","➕");
+  add("a",L([1,5,10,25,50,100]),madeBc,"Voeg # nieuwe chips toe die een barcode hebben.","Barcodes","🔖");
+  return out.slice(0,250);
 }
 var BGOPEN=false;try{BGOPEN=localStorage.getItem("cs_bgo")==="1"}catch(e){}
 function badgesHtml(u){
-  var l=badgeData(u),got=l.filter(function(x){return x.v>=x.g}).length,earned=l.filter(function(x){return x.v>=x.g});
-  l.sort(function(a,b){return (b.v>=b.g?1:0)-(a.v>=a.g?1:0)||(b.v/b.g)-(a.v/a.g)});
+  var l=badgeData(u),earned=l.filter(function(x){return x.v>=x.g}),got=earned.length;
   var h='<div class="card"><div class="row"><button class="grow" data-bt="1" aria-expanded="'+(BGOPEN?"true":"false")+'" aria-label="Badges in- of uitklappen" style="text-align:left;background:none;border:0;font:inherit;color:inherit;padding:0;cursor:pointer;display:flex;align-items:center;gap:8px"><span class="name">Badges ('+got+'/'+l.length+')</span><span style="font-size:.9rem;transition:transform .2s;display:inline-block;transform:rotate('+(BGOPEN?"180":"0")+'deg)">▾</span></button><button class="btn ghost sm" data-bi="'+esc(u)+'" aria-label="Uitleg over de badges">Uitleg</button></div>';
-  if(!BGOPEN)return h+'<div class="bprev" style="margin-top:8px;font-size:1.5rem;display:flex;gap:6px;flex-wrap:wrap">'+(earned.length?earned.map(function(x){return '<span title="'+esc(x.n)+'">'+x.i+'</span>'}).join(""):'<span class="meta" style="font-size:.85rem">Nog geen badges behaald. Tik om je voortgang te zien.</span>')+'</div></div>';
-  return h+'<div class="bgs" style="margin-top:10px">'+l.map(function(x){var ok=x.v>=x.g;return '<div class="bg'+(ok?"":" lock")+'" title="'+esc(x.d)+'"><span class="bi">'+x.i+'</span><b>'+esc(x.n)+'</b><small>'+(ok?"Behaald":Math.min(x.v,x.g)+"/"+x.g)+'</small></div>'}).join("")+'</div></div>';
+  if(!BGOPEN){
+    var last=earned.slice().sort(function(a,b){return b.g-a.g}),seen={},pv=[];
+    last.forEach(function(x){if(pv.length<12&&!seen[x.i]){seen[x.i]=1;pv.push(x)}});
+    return h+'<div class="bprev" style="margin-top:8px;font-size:1.5rem;display:flex;gap:6px;flex-wrap:wrap">'+(pv.length?pv.map(function(x){return '<span title="'+esc(x.n)+'">'+x.i+'</span>'}).join("")+(got>pv.length?'<span class="meta" style="font-size:.85rem;align-self:center">+'+(got-pv.length)+' meer</span>':''):'<span class="meta" style="font-size:.85rem">Nog geen badges behaald. Tik om je voortgang te zien.</span>')+'</div></div>';
+  }
+  return h+BCATS.map(function(c){
+    var g=l.filter(function(x){return x.k===c[0]});if(!g.length)return "";
+    var ge=g.filter(function(x){return x.v>=x.g}).length;
+    return '<div class="meta" style="margin:12px 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">'+c[1]+' ('+ge+'/'+g.length+')</div><div class="bgs">'+g.map(function(x){var ok=x.v>=x.g;return '<div class="bg'+(ok?"":" lock")+'" title="'+esc(x.d)+'"><span class="bi">'+x.i+'</span><b>'+esc(x.n)+'</b><small>'+(ok?"Behaald":Math.min(x.v,x.g)+"/"+x.g)+'</small></div>'}).join("")+'</div>';
+  }).join("")+'</div>';
 }
 function openBadgeInfo(u){
   var l=badgeData(u),got=l.filter(function(x){return x.v>=x.g}).length,m=$("modal");
   m.innerHTML='<div class="modal" id="ov"><div class="sheet" role="dialog" aria-label="Uitleg badges"><div class="row"><div class="name grow">Badges uitgelegd</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div><p class="meta" style="margin:6px 0 10px">Je verdient badges door chips in te checken en mee te doen. '+(u===uid?"Je hebt":"Deze gebruiker heeft")+' er '+got+' van de '+l.length+'.</p>'
-   +l.map(function(x){var ok=x.v>=x.g,pc=Math.min(100,Math.round(x.v/x.g*100));return '<div class="card" style="padding:12px;margin:8px 0"><div class="row"><span style="font-size:1.8rem'+(ok?'':';filter:grayscale(1);opacity:.55')+'">'+x.i+'</span><div class="grow"><b>'+esc(x.n)+(ok?' ✓':'')+'</b><div class="meta">'+esc(x.d)+'</div></div></div><div style="height:8px;border-radius:99px;background:#ececea;margin-top:10px;overflow:hidden"><div style="height:100%;width:'+pc+'%;background:#f2a900;border-radius:99px"></div></div><div class="meta" style="margin-top:4px">'+(ok?"Behaald":Math.min(x.v,x.g)+" van "+x.g)+'</div></div>'}).join("")+'</div></div>';
+   +BCATS.map(function(c){
+     var g=l.filter(function(x){return x.k===c[0]});if(!g.length)return "";
+     var sub={};g.forEach(function(x){(sub[x.d.replace(/\d+/,"#")]=sub[x.d.replace(/\d+/,"#")]||[]).push(x)});
+     return '<div class="card" style="padding:12px;margin:8px 0"><div class="name" style="margin-bottom:6px">'+c[1]+'</div>'+keys(sub).map(function(k){
+       var a=sub[k],nx=a.filter(function(x){return x.v<x.g})[0],d0=a[0].d;
+       var line=k.replace("#",'<b>…</b>');
+       return '<div style="padding:6px 0;border-top:1px solid var(--line)"><div class="meta">'+esc(k).replace("#","…")+'</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0">'+a.map(function(x){var ok=x.v>=x.g;return '<span title="'+esc(x.n+": "+x.d)+'" style="font-size:.78rem;padding:3px 8px;border-radius:99px;background:'+(ok?'var(--soft,#fff4cc)':'#f3f3f1;color:#8a8a84')+'">'+x.i+' '+x.g+(ok?' ✓':'')+'</span>'}).join("")+'</div>'+(nx?'<div class="meta">Volgende: '+esc(nx.n)+' ('+Math.min(nx.v,nx.g)+' van '+nx.g+')</div>':'<div class="meta">Alles behaald ✓</div>')+'</div>'}).join("")+'</div>';
+   }).join("")+'</div></div>';
   $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
 }
 /* zoeken: filters */
@@ -1039,7 +1082,7 @@ function openPrivacy(){
   m.innerHTML='<div class="modal" id="ov"><div class="sheet pvs" role="dialog" aria-label="Privacyverklaring"><div class="row"><div class="name grow">Privacy</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div><div class="pvbox2">'+privacyHtml()+'</div></div></div>';
   $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
 }
-(function(){var s=document.createElement("style");s.textContent=".bgs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bg{text-align:center;padding:10px 4px;border-radius:16px;background:var(--soft,#fff4cc);display:grid;gap:2px;align-content:start}.bg .bi{font-size:1.6rem}.bg b{font-size:.78rem;line-height:1.15}.bg small{color:var(--mut,#6a6a64);font-size:.72rem}.bg.lock{background:#f3f3f1;filter:grayscale(1);opacity:.55}.ck{display:flex;gap:10px;align-items:flex-start;font-size:.85rem;text-align:left;color:#141414}.ck input{width:20px;height:20px;padding:0;flex:none;margin-top:2px}.pvbox,.pvbox2{font-size:.9rem;line-height:1.45;text-align:left}.pvbox{background:#fff;color:#141414;border-radius:18px;padding:16px;max-height:55vh;overflow:auto}.pvbox h4,.pvbox2 h4{margin:14px 0 4px;font-size:.98rem}.pvbox h4:first-child,.pvbox2 h4:first-child{margin-top:0}.pvbox p,.pvbox2 p{margin:0 0 6px}.pvbox ul,.pvbox2 ul{margin:0 0 6px;padding-left:18px}";document.head.appendChild(s)})();
+(function(){var s=document.createElement("style");s.textContent=".cpr{margin:24px 0 8px;text-align:center;font-size:.72rem;line-height:1.4;color:var(--mut,#6a6a64)}#gate .cpr{color:#141414;opacity:.7;max-width:420px;margin:16px 0 0}.bgs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bg{text-align:center;padding:10px 4px;border-radius:16px;background:var(--soft,#fff4cc);display:grid;gap:2px;align-content:start}.bg .bi{font-size:1.6rem}.bg b{font-size:.78rem;line-height:1.15}.bg small{color:var(--mut,#6a6a64);font-size:.72rem}.bg.lock{background:#f3f3f1;filter:grayscale(1);opacity:.55}.ck{display:flex;gap:10px;align-items:flex-start;font-size:.85rem;text-align:left;color:#141414}.ck input{width:20px;height:20px;padding:0;flex:none;margin-top:2px}.pvbox,.pvbox2{font-size:.9rem;line-height:1.45;text-align:left}.pvbox{background:#fff;color:#141414;border-radius:18px;padding:16px;max-height:55vh;overflow:auto}.pvbox h4,.pvbox2 h4{margin:14px 0 4px;font-size:.98rem}.pvbox h4:first-child,.pvbox2 h4:first-child{margin-top:0}.pvbox p,.pvbox2 p{margin:0 0 6px}.pvbox ul,.pvbox2 ul{margin:0 0 6px;padding-left:18px}";document.head.appendChild(s)})();
 /* ---------- v5 end ---------- */
 
 /* ---------- v6 begin ---------- */
@@ -1333,7 +1376,8 @@ function gateHtml(){
   if(st==="register")return h+'<div class="gbox"><div class="name">Account aanmaken</div><input id="un" maxlength="24" autocomplete="off" autocapitalize="none" placeholder="Gebruikersnaam" aria-label="Gebruikersnaam" value="'+esc(RF.un||"")+'">'+em.replace("<input ",'<input value="'+esc(RF.em||"")+'" ')+'<input id="pw" type="password" autocomplete="new-password" placeholder="Wachtwoord (minstens 6 tekens)" aria-label="Wachtwoord">'+ctBox(CT.code)+'<label class="ck"><input type="checkbox" id="agree"'+(RF.agree?" checked":"")+'><span>Ik ben 16 jaar of ouder en ga akkoord met de <button type="button" class="gl" data-g="priv" style="display:inline;width:auto;padding:0;text-decoration:underline">privacyverklaring</button></span></label>'+m+'<button class="gb pri" data-g="mk">Account aanmaken</button><button class="gb" data-g="gback">Terug</button></div>';
   return h+'<div class="gbox"><button class="gb pri" data-g="login">Inloggen</button><button class="gb" data-g="create">Account aanmaken</button><button class="gl" data-g="guest">Doorgaan als gast</button>'+m+'<p class="meta" style="margin:0;text-align:center">Als gast kun je alles bekijken. Inchecken, liken en reageren vraagt een account.</p></div>';
 }
-function showGate(){var g=$("gate");if(S.gate==="app"){g.style.display="none";g.innerHTML="";pushSync();return}g.style.display="flex";g.innerHTML=gateHtml()}
+function copyHtml(){var h=(typeof COPYRIGHT_HOLDER==="string"&&COPYRIGHT_HOLDER.trim())?COPYRIGHT_HOLDER.trim():"";return '<p class="cpr">© '+new Date().getFullYear()+' Chipstrack'+(h?' · '+esc(h):'')+'. Alle rechten voorbehouden.</p>'}
+function showGate(){var g=$("gate");if(S.gate==="app"){g.style.display="none";g.innerHTML="";pushSync();return}g.style.display="flex";g.innerHTML=gateHtml()+copyHtml()}
 async function authAct(a){
   S.gmsg="";
   try{
