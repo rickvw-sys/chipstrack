@@ -266,7 +266,8 @@ function safe(s){return String(s).replace(/[^A-Za-z0-9_-]/g,"x")}
 function nid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 function toast(m){var t=document.createElement("div");t.className="toast";t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2600)}
 function imgOk(u){return OKIMG.test(u||"")?u:""}
-function fmtG(n){return (Math.round(+n*10)/10)+" g"}
+function fmtG(n){return +n>0?(Math.round(+n*10)/10)+" g":"onbekend"}
+function gPar(n){return +n>0?" ("+fmtG(n)+")":""}
 function isMod(){return !!(PM[uid]&&PM[uid].admin)}
 function placeTag(p){return p&&p.place?' · 📍 '+esc(p.place):''}
 function when(ts){return new Date(ts).toLocaleString("nl-NL",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})}
@@ -483,7 +484,7 @@ function feedHtml(){
 }
 function rankRow(it,i){
   var pr=it.p,im=it.a.img;
-  return '<button class="card rk" data-chip="'+pr.id+'"><div class="pos">'+(i+1)+'</div><div class="thumb"'+(im?' style="background-image:url('+im+')"':'')+'>'+(im?'':'🥔')+'</div><div class="grow"><div class="name">'+esc(pr.flavor)+' ('+fmtG(pr.size)+')</div><div class="meta">'+esc(pr.brand+(pr.variant?" · "+pr.variant:""))+'</div><div>Gem. score '+stars(it.v)+' <b>'+it.v.toFixed(1)+'</b> <span class="meta">('+it.a.n+')</span></div></div></button>';
+  return '<button class="card rk" data-chip="'+pr.id+'"><div class="pos">'+(i+1)+'</div><div class="thumb"'+(im?' style="background-image:url('+im+')"':'')+'>'+(im?'':'🥔')+'</div><div class="grow"><div class="name">'+esc(pr.flavor)+gPar(pr.size)+'</div><div class="meta">'+esc(pr.brand+(pr.variant?" · "+pr.variant:""))+'</div><div>Gem. score '+stars(it.v)+' <b>'+it.v.toFixed(1)+'</b> <span class="meta">('+it.a.n+')</span></div></div></button>';
 }
 function rankingPage(){
   var h='<button class="btn ghost sm" data-back="1" style="margin-bottom:12px">← Terug</button><div class="name">Ranglijst</div><p class="meta" style="margin:0 0 10px">Gebaseerd op het aantal check-ins.</p>';
@@ -520,7 +521,7 @@ function zres(){
   if(!res.length)h+='<div class="card">Geen chips gevonden. Scan een barcode of tik op Review om ze toe te voegen.</div>';
   res.slice(0,50).forEach(function(pr){
     var a=aggr(D.posts.filter(function(p){return p.pid===pr.id}),pr);
-    h+='<button class="card rk" data-chip="'+pr.id+'"><div class="thumb"'+(a.img?' style="background-image:url('+a.img+')"':'')+'>'+(a.img?'':'🥔')+'</div><div class="grow"><div class="name">'+esc(pr.flavor)+' ('+fmtG(pr.size)+')</div><div class="meta">'+esc(pr.brand+(pr.variant?" · "+pr.variant:"")+(pr.code?" · "+pr.code:""))+'</div><div>'+(a.n?stars(a.avg)+' <b>'+a.avg.toFixed(1)+'</b> <span class="meta">('+a.n+')</span>':'<span class="meta">Nog niet beoordeeld</span>')+'</div></div></button>';
+    h+='<button class="card rk" data-chip="'+pr.id+'"><div class="thumb"'+(a.img?' style="background-image:url('+a.img+')"':'')+'>'+(a.img?'':'🥔')+'</div><div class="grow"><div class="name">'+esc(pr.flavor)+gPar(pr.size)+'</div><div class="meta">'+esc(pr.brand+(pr.variant?" · "+pr.variant:"")+(pr.code?" · "+pr.code:""))+'</div><div>'+(a.n?stars(a.avg)+' <b>'+a.avg.toFixed(1)+'</b> <span class="meta">('+a.n+')</span>':'<span class="meta">Nog niet beoordeeld</span>')+'</div></div></button>';
   });
   if(tk.length){
     h+='<div class="name" style="margin:14px 0 8px">Gebruikers ('+us.length+')</div>';
@@ -748,7 +749,7 @@ function openForm(code,pid,epid){
     +'<label for="fv">Variant (optioneel)</label><input id="fv" list="vl" maxlength="40" placeholder="Bijvoorbeeld Sensations" value="'+esc(epr?epr.variant:"")+'"><datalist id="vl">'+list("variant")+'</datalist>'
     +'<label for="ff">Smaak</label><input id="ff" list="fl" maxlength="60" placeholder="Bijvoorbeeld Roasted Chicken &amp; Thyme" value="'+esc(epr?epr.flavor:"")+'"><datalist id="fl">'+list("flavor")+'</datalist>'
     +'<label for="ft">Type (optioneel)</label><input id="ft" list="tl" maxlength="40" placeholder="Bijvoorbeeld Regular Crisp" value="'+esc(epr?epr.type:"")+'"><datalist id="tl">'+list("type")+'</datalist>'
-    +'<label for="fs">Verpakking (gram)</label><input id="fs" type="number" inputmode="decimal" min="1" max="2000" step="0.1" placeholder="Bijvoorbeeld 150" value="'+esc(epr?String(epr.size):"")+'">'+(ep?"":bcHtml);
+    +'<label for="fs">Verpakking in gram (optioneel)</label><input id="fs" type="number" inputmode="decimal" min="1" max="2000" step="0.1" placeholder="Bijvoorbeeld 150" value="'+esc(epr&&epr.size>0?String(epr.size):"")+'">'+(ep?"":bcHtml);
   m.innerHTML='<div class="modal" id="ov"><div class="sheet" role="dialog" aria-label="'+(ep?"Check-in aanpassen":"Recensie toevoegen")+'"><div class="row"><div class="name grow" style="font-size:1.3rem">'+(ep?"Check-in aanpassen":"Recensie toevoegen")+'</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div>'+top
    +'<div class="card" style="margin-top:12px">'+rate("rt","Smaak",ep&&ep.taste!=null?ep.taste:3)+rate("rx","Textuur",ep&&ep.tex!=null?ep.tex:3)
    +'<div class="tot"><div class="row"><b class="grow">TOTAAL</b><b class="tn" id="rov"></b></div><div id="ros" class="st big" style="margin:6px 0"></div><input type="range" id="ro" min="0.5" max="5" step="0.5" value="'+(ep?ep.rating:3)+'" aria-label="Totaal"></div>'
@@ -803,9 +804,8 @@ function openForm(code,pid,epid){
   $("ok").onclick=function(){
     stopScan();
     if(ep){
-      var g={tags:canTag?tg:null,tags0:tg0,place:place,img:img,text:$("fx").value.trim(),taste:+$("rt").value,tex:+$("rx").value,rating:+$("ro").value,brand:$("fb").value.trim(),variant:$("fv").value.trim(),flavor:$("ff").value.trim(),type:$("ft").value.trim(),size:parseFloat($("fs").value)};
+      var g={tags:canTag?tg:null,tags0:tg0,place:place,img:img,text:$("fx").value.trim(),taste:+$("rt").value,tex:+$("rx").value,rating:+$("ro").value,brand:$("fb").value.trim(),variant:$("fv").value.trim(),flavor:$("ff").value.trim(),type:$("ft").value.trim(),size:parseFloat($("fs").value)||0};
       if(!g.brand||!g.flavor){toast("Vul merk en smaak in");return}
-      if(!(g.size>0)){toast("Vul de verpakking in gram in");return}
       if(updateCheckin(ep.id,g)){closeModal();toast("Check-in aangepast")}return;
     }
     var f={tags:tg.slice(),code:code||"",place:place,img:img,text:$("fx").value.trim(),taste:+$("rt").value,tex:+$("rx").value,rating:+$("ro").value};
@@ -816,9 +816,8 @@ function openForm(code,pid,epid){
     if(bx&&pr&&bx.id!==pr.id){toast("Deze barcode hoort al bij "+bx.brand+" "+bx.flavor+".");return}
     if(pr){f.pid=pr.id;f.brand=pr.brand;f.variant=pr.variant;f.flavor=pr.flavor;f.type=pr.type;f.size=pr.size}
     else{
-      f.brand=$("fb").value.trim();f.variant=$("fv").value.trim();f.flavor=$("ff").value.trim();f.type=$("ft").value.trim();f.size=parseFloat($("fs").value);
+      f.brand=$("fb").value.trim();f.variant=$("fv").value.trim();f.flavor=$("ff").value.trim();f.type=$("ft").value.trim();f.size=parseFloat($("fs").value)||0;
       if(!bx&&(!f.brand||!f.flavor)){toast("Vul merk en smaak in");return}
-      if(!bx&&!(f.size>0)){toast("Vul de verpakking in gram in");return}
       var key=[f.brand,f.variant,f.flavor,f.type,Math.round(f.size)].map(function(x){return String(x).trim().toLowerCase()}).join("|");
       var ex=D.products.filter(function(p){return [p.brand,p.variant,p.flavor,p.type,Math.round(p.size)].map(function(x){return String(x).trim().toLowerCase()}).join("|")===key})[0];
       ex=bx||ex;
@@ -1280,13 +1279,12 @@ function openAdmin(){
 function editProduct(id){
   var p=PR[id];if(!p)return;var m=$("modal2");
   m.innerHTML='<div class="modal mid" id="ov2"><div class="dlg" role="dialog" aria-label="Chips aanpassen"><div class="row" style="margin-bottom:8px"><div class="name grow">Chips aanpassen</div><button class="act" id="cx2" aria-label="Sluiten">'+ic("x")+'</button></div><p class="meta" style="margin:0 0 6px">Deze wijziging geldt voor alle check-ins van deze chips.</p>'
-   +'<label for="ab">Merk</label><input id="ab" maxlength="40" value="'+esc(p.brand)+'"><label for="av">Variant</label><input id="av" maxlength="40" value="'+esc(p.variant)+'"><label for="af">Smaak</label><input id="af" maxlength="60" value="'+esc(p.flavor)+'"><label for="at">Type</label><input id="at" maxlength="40" value="'+esc(p.type)+'"><label for="as">Verpakking (gram)</label><input id="as" type="number" inputmode="decimal" min="1" step="0.1" value="'+esc(String(p.size))+'">'
+   +'<label for="ab">Merk</label><input id="ab" maxlength="40" value="'+esc(p.brand)+'"><label for="av">Variant</label><input id="av" maxlength="40" value="'+esc(p.variant)+'"><label for="af">Smaak</label><input id="af" maxlength="60" value="'+esc(p.flavor)+'"><label for="at">Type</label><input id="at" maxlength="40" value="'+esc(p.type)+'"><label for="as">Verpakking in gram (optioneel)</label><input id="as" type="number" inputmode="decimal" min="1" step="0.1" value="'+esc(p.size>0?String(p.size):"")+'">'
    +'<p class="meta" id="aem" role="status" style="min-height:1.2em"></p><button class="btn full" id="aok">Opslaan</button></div></div>';
   $("cx2").onclick=function(){closeModal("modal2")};$("ov2").onclick=function(e){if(e.target.id==="ov2")closeModal("modal2")};
   $("aok").onclick=async function(){
-    var b=$("ab").value.trim(),f=$("af").value.trim(),s=parseFloat($("as").value),n=$("aem");
+    var b=$("ab").value.trim(),f=$("af").value.trim(),s=parseFloat($("as").value)||0,n=$("aem");
     if(!b||!f){n.textContent="Vul merk en smaak in.";return}
-    if(!(s>0)){n.textContent="Vul de verpakking in gram in.";return}
     this.disabled=true;n.textContent="Bezig...";
     var r=await SB.rpc("admin_update_product",{p_id:id,p_brand:b,p_variant:$("av").value.trim(),p_flavor:f,p_type:$("at").value.trim(),p_size:s});
     if(r.error){n.textContent=/duplicate|unique|match_key/i.test(r.error.message||"")?"Deze chips bestaan al. Voeg ze samen in plaats van aanpassen.":"Opslaan mislukt: "+r.error.message;this.disabled=false;return}
