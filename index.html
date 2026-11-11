@@ -886,53 +886,115 @@ var CSS_CT=".ctw{position:relative}.ctl{max-height:230px;overflow:auto;backgroun
 /* ---------- v5 begin ---------- */
 /* badges */
 function placeCountry(pl){var a=String(pl||"").split(",");return a.length>1?ctNorm(a[a.length-1]):""}
-var BCATS=[["n","Check-ins"],["c","Verschillende chips"],["m","Merken"],["s","Smaakrichtingen"],["w","Reizen en plaatsen"],["f","Foto's en recensies"],["b","Beoordelingen"],["x","Sociaal"],["t","Streaks en tempo"],["a","Chips toevoegen"]];
-var BN_N=[[1,"Eerste check-in","🥔"],[5,"Warming-up","🥨"],[10,"Chipsliefhebber","🍟"],[25,"Vaste klant","🛒"],[50,"Chipsfanaat","🔥"],[75,"Knabbelaar","😋"],[100,"Chipslegende","👑"],[150,"Zakkenvuller","🎒"],[200,"Chipsmeester","🏅"],[250,"Kwart naar duizend","🎯"],[300,"Chipsgeleerde","🎓"],[400,"Knabbelkampioen","🏆"],[500,"Halve duizend","🌟"],[600,"Chipsprofessor","🧑‍🏫"],[700,"Onverzadigbaar","💥"],[800,"Chipsgrootmeester","🥇"],[900,"Bijna daar","🚀"],[1000,"Duizend check-ins","💎"]];
-var BN_C=[[1,"Eerste smaak","🥔"],[5,"Proeverij","🥄"],[10,"Smaakontdekker","🧭"],[20,"Smaakzoeker","🔎"],[30,"Smaakexpert","🔬"],[50,"Smaaksommelier","🍷"],[75,"Smaakcollectie","🗂️"],[100,"Honderd smaken","💯"],[150,"Smaakencyclopedie","📚"],[200,"Smaakarchivaris","🏛️"],[250,"Smaakprofessor","🧪"],[300,"Smaakgrootmeester","🧙"],[350,"Smaaklegende","🦄"],[400,"Smaakmythe","🐉"],[450,"Bijna alle smaken","🌈"],[500,"Vijfhonderd smaken","👑"]];
-function bTier(i,len){return ["🥉","🥈","🥇","🏅","💎"][Math.min(4,Math.floor(i*5/len))]}
+var BCATS=[["n","Check-ins"],["c","Verschillende chips"],["m","Merken"],["s","Smaakrichtingen"],["w","Reizen en plaatsen"],["f","Foto's en recensies"],["b","Beoordelingen"],["x","Sociaal"],["t","Streaks en tempo"],["a","Chips toevoegen"],["z","Uitdagingen"]];
+var BPOOL=Array.from("🥔🥨🍟🛒🔥😋👑🎒🏅🎯🎓🏆🌟🧑‍🏫💥🥇🚀💎🥄🧭🔎🔬🍷🗂️💯📚🏛️🧪🧙🦄🐉🌈🏷️🎖️🧳🗺️🏔️⛵🛫🌋🏝️🎡🏰🗽🌉🚂🚲🛶🎪📸🖼️🎞️🎬📷🏞️📖📝🗞️✒️🖋️📰🎙️📜🔖⭐🌠☄️🌌🔭🪐🧐⚖️🔨🕵️🥸🐂🐑🐘🦁🐅🦅🦉🐺🦊🐻🐼🐨🦘🦒🦓🦏🐊🐢🦎🐙🦑🦈🐬🐳🐋🦭🦦🦫🦔🐿️🦜🦩🦚🐝🦋🐞🪲🕷️🌻🌵🍀🍄🌴🌲🌸🍁🍉🍓🍒🍑🍍🥭🥝🍔🍕🌭🌮🌯🥙🧆🥪🥗🍝🍜🍣🍤🍙🍩🍪🎂🍰🧁🍫🍬🍭🍿🥜🌰🍞🥐🥖🧇🥞🧀🍳🥓🥩🍖🍗🧈🍯🧃🥤🍺🥂🍾🔮🎲🎰🧩🪀🪁🎸🎺🎻🥁🎤🎧🎹🪕🎨🧵🧶🪡🛡️⚔️🏹🪃🧲🔑🗝️🔒💡🔋🔌⌚⏳⏰🕰️📅📆🗓️🔭🛰️🛸🤖👾🎮🕹️🧸🪆🪅🎁🎈🎉🎊🪩🎄🎃🎆🎇🧨❤️🧡💛💚💙💜🖤🤍🤎💖💝💞📣📢🔔🛎️🧭🚩🏁🚦⚓⚡❄️☀️🌙🌊🌬️🌪️🌈☔⛄🔥🌍🌎🌏🪙💰💳🧾📦📫📮🗳️🧺🧴🧼🪥🪒🧹🛁🛏️🪑🚪🪟🏠🏡🏢🏭🏗️⛲⛺🏕️🛖🛕🕌⛪🗼🗿🎠🎢🚁🛩️🚢🚤🏎️🏍️🚜🚒🚑🚓🛵").filter(function(e,i,a){return a.indexOf(e)===i&&"🫑🍖🧀🧅🧂🌶️🍗🍯🌿🍘".indexOf(e)<0});
+var BLAD={
+ n:[[1,"Eerste check-in"],[10,"Chipsliefhebber"],[25,"Vaste klant"],[50,"Chipsfanaat"],[100,"Chipslegende"],[150,"Zakkenvuller"],[250,"Kwart duizend"],[400,"Knabbelkampioen"],[500,"Halve duizend"],[750,"Chipsgrootmeester"],[1000,"Duizend check-ins"]],
+ c:[[5,"Proeverij"],[15,"Smaakontdekker"],[30,"Smaakexpert"],[50,"Smaaksommelier"],[100,"Honderd smaken"],[150,"Smaakencyclopedie"],[200,"Smaakarchivaris"],[300,"Smaakgrootmeester"],[400,"Smaaklegende"],[500,"Smaakmythe"]],
+ m:[[3,"Merkenproever"],[5,"Merkenjager"],[10,"Merkenkenner"],[20,"Merkenverzamelaar"],[35,"Merkenprofessor"],[50,"Merkenmeester"],[75,"Merkenencyclopedie"],[100,"Merkenlegende"]],
+ land:[[2,"Grensganger"],[3,"Wereldreiziger"],[5,"Globetrotter"],[8,"Wereldburger"],[12,"Paspoortvol"],[20,"Wereldomzeiler"],[30,"Chips zonder grenzen"]],
+ plaats:[[3,"Dorpsverkenner"],[10,"Stadszwerver"],[25,"Plaatsenjager"],[50,"Kaartlezer"],[100,"Landkaartkoning"],[200,"Overal geweest"]],
+ foto:[[5,"Fotograaf"],[25,"Fotojournalist"],[50,"Chipsfotograaf"],[100,"Fotostudio"],[200,"Galeriehouder"],[350,"Fotoboek"],[500,"Museum van chips"]],
+ rev:[[5,"Recensent"],[25,"Columnist"],[50,"Smaakcriticus"],[100,"Chipsschrijver"],[200,"Hoofdredacteur"],[350,"Auteur"],[500,"Chipsencyclopedist"]],
+ hi:[[3,"Vijfsterrenvanger"],[10,"Sterrenregen"],[25,"Hemelbestormer"],[50,"Perfectionist"],[100,"Melkweg"]],
+ lo:[[3,"Kritische smaak"],[10,"Strenge jury"],[25,"Chipsrechter"],[50,"Onomkoopbaar"]],
+ bl:[[10,"Merktrouw"],[25,"Huismerk"],[50,"Merkfan"],[100,"Merkfanaat"]],
+ samechip:[[10,"Trouwe liefde"],[25,"Onafscheidelijk"]],
+ likes:[[10,"Gewaardeerd"],[50,"Populair"],[100,"Influencer"],[250,"Likemagneet"],[500,"Chipsster"],[1000,"Viral"],[2500,"Chipsicoon"]],
+ cms:[[5,"Gesprekstarter"],[25,"Kletskous"],[75,"Discussieleider"],[150,"Praatgraag"],[300,"Forumkoning"],[500,"Onuitputtelijk"]],
+ fols:[[3,"Eerste fans"],[10,"Netwerker"],[25,"Kringleider"],[50,"Fanclub"],[100,"Volgersfeest"],[250,"Chipsberoemdheid"]],
+ fing:[[5,"Nieuwsgierig"],[15,"Vriendenkring"],[30,"Sociale vlinder"]],
+ tgd:[[3,"Tagger"],[10,"Maatjes"],[25,"Chipsmaatjes"],[50,"Groepsuitje"],[100,"Chipsclub"]],
+ tgm:[[3,"Opgemerkt"],[10,"Gevraagd"],[25,"Vaste gast"],[50,"Onmisbaar"]],
+ streak:[[3,"Driedaagse"],[7,"Weekwinnaar"],[14,"Tweewekenreeks"],[30,"Maandmeester"],[60,"Onstuitbaar"],[100,"Honderd dagen"]],
+ perdag:[[3,"Driedubbele"],[6,"Chipsfeestje"],[10,"Chipsmarathon"]],
+ permaand:[[20,"Drukke maand"],[40,"Chipsmaand"],[75,"Maandmonster"],[120,"Chipsbeest"]],
+ weken:[[8,"Weekritme"],[26,"Halfjaarritme"],[52,"Jaarritme"]],
+ maanden:[[3,"Seizoenspeler"],[6,"Halfjaarspeler"],[12,"Jaarronde"],[24,"Tweejarenclub"]],
+ weekend:[[25,"Weekendknabbelaar"],[100,"Zondagskind"],[250,"Weekendkoning"]],
+ dossier:[[10,"Dossiervorming"],[50,"Volledig dossier"]],
+ made:[[3,"Pionier"],[10,"Ontdekker"],[25,"Cartograaf"],[50,"Catalogusbouwer"],[100,"Archiefbouwer"],[250,"Chipswikipedia"]],
+ madebc:[[3,"Scanner"],[10,"Barcodejager"],[25,"Streepjescode"],[50,"Scannerkoning"],[100,"Barcodemeester"]],
+ trend:[[1,"Trendsetter"],[5,"Smaakmaker"],[10,"Hitmaker"],[25,"Chipsproducent"]]
+};
 function badgeData(u){
-  var ps=D.posts.filter(function(x){return x.uid===u}),b={},bc={},c={},ctr={},pl={},foto=0,rev=0,hi=0,lo=0,mine={},days={},dc={},mc={},cat={};
+  var ps=D.posts.filter(function(x){return x.uid===u}),b={},bc={},c={},cc={},ctr={},pl={},foto=0,rev=0,hi=0,lo=0,sum=0,mine={},days={},dc={},mc={},wk={},cat={},night=0,early=0,wend=0,dos=0,ev={};
   ps.forEach(function(x){
-    var bk=normName(x.brand);b[bk]=1;bc[bk]=(bc[bk]||0)+1;c[x.pid]=1;if(imgOk(x.img))foto++;if(x.text)rev++;mine[x.id]=1;
+    var bk=normName(x.brand);b[bk]=1;bc[bk]=(bc[bk]||0)+1;c[x.pid]=1;cc[x.pid]=(cc[x.pid]||0)+1;mine[x.id]=1;sum+=x.rating;
+    var im=!!imgOk(x.img);if(im)foto++;if(x.text)rev++;if(im&&x.text&&x.place)dos++;
     var k=placeCountry(x.place);if(k)ctr[k]=1;if(x.place)pl[x.place]=1;
     if(x.rating>=5)hi++;if(x.rating<=2)lo++;
     var d=new Date(x.ts),dn=Math.floor(Date.UTC(d.getFullYear(),d.getMonth(),d.getDate())/864e5);days[dn]=1;dc[dn]=(dc[dn]||0)+1;
-    var mk=d.getFullYear()*12+d.getMonth();mc[mk]=(mc[mk]||0)+1;
+    var mk=d.getFullYear()*12+d.getMonth();mc[mk]=(mc[mk]||0)+1;wk[Math.floor((dn+3)/7)]=1;
+    var hr=d.getHours();if(hr<5)night++;else if(hr<7)early++;
+    var wd=d.getDay();if(wd===0||wd===6)wend++;
+    ev[(d.getMonth()+1)+"-"+d.getDate()]=1;
     flavCats(x).forEach(function(f){cat[f]=(cat[f]||0)+1});
   });
   var likes=D.likes.filter(function(l){return mine[l.post]&&l.uid!==u}).length,cms=D.comments.filter(function(x){return x.uid===u}).length,fols=D.follows.filter(function(f){return f.to===u}).length,fing=D.follows.filter(function(f){return f.from===u}).length;
   var tgd=D.tags.filter(function(t){return mine[t.post]}).length,tgm=D.tags.filter(function(t){return t.uid===u}).length;
   var made=D.products.filter(function(p){return p.uid===u}),madeBc=made.filter(function(p){return p.code}).length;
-  var dl=keys(days).map(Number).sort(function(a,b){return a-b}),best=0,run=0,prev=null;
-  dl.forEach(function(x){run=(prev!==null&&x===prev+1)?run+1:1;if(run>best)best=run;prev=x});
+  var trend=made.filter(function(p){var o={};D.posts.forEach(function(x){if(x.pid===p.id&&x.uid!==u)o[x.uid]=1});return keys(o).length>=2}).length;
+  function run(arr){arr=arr.slice().sort(function(a,b){return a-b});var best=0,r=0,pv=null;arr.forEach(function(x){r=(pv!==null&&x===pv+1)?r+1:1;if(r>best)best=r;pv=x});return best}
   function mx(o){var m=0;keys(o).forEach(function(k){if(o[k]>m)m=o[k]});return m}
-  var n=ps.length,out=[];
-  function add(cat,list,v,desc,pre,ic){list.forEach(function(t,i){out.push({k:cat,i:t[2]||ic||bTier(i,list.length),n:t[1]||(pre+" "+t[0]),d:desc.replace("#",t[0]),v:v,g:t[0]})})}
-  function L(a,ic){return a.map(function(g,i){return [g,null,null]})}
-  add("n",BN_N,n,"Plaats # check-ins.");
-  add("c",BN_C,keys(c).length,"Check # verschillende chips in. Elke chips telt één keer, ook als je hem vaker incheckt.");
-  add("m",L([1,3,5,10,15,20,30,40,50,75,100]),keys(b).length,"Check chips in van # verschillende merken.","Merken");
-  var fk=FLAV.map(function(f){return f[0]}).concat(["Naturel & zout"]),fi={"Paprika":"🫑","Barbecue":"🍖","Kaas":"🧀","Zure room & ui":"🧅","Zout & azijn":"🧂","Pittig":"🌶️","Kip":"🍗","Zoet":"🍯","Kruiden":"🌿","Naturel & zout":"🥔"};
-  fk.forEach(function(f){[[5,"liefhebber"],[25,"kenner"],[100,"meester"]].forEach(function(t){out.push({k:"s",i:fi[f]||"🥔",n:f+"-"+t[1],d:"Check # chips met smaakrichting "+f+" in.".replace("#",t[0]),v:cat[f]||0,g:t[0]})})});
-  out.forEach(function(x){if(x.k==="s")x.d=x.d.replace("#",x.g)});
-  add("w",L([1,2,3,5,7,10,15,20,30]),keys(ctr).length,"Check in met je locatie aan in # verschillende landen. De plaatsnaam bij je check-in bepaalt het land.","Landen","🌍");
-  add("w",L([1,3,5,10,25,50,100]),keys(pl).length,"Check in op # verschillende plaatsen.","Plaatsen","📍");
-  add("f",L([1,5,10,25,50,100,150,200,300,500]),foto,"Plaats # check-ins met een foto.","Foto's","📸");
-  add("f",L([1,5,10,25,50,100,150,200,300,500]),rev,"Schrijf bij # check-ins een recensie.","Recensies","✍️");
-  add("b",L([1,5,10,25,50,100]),hi,"Geef # keer de volle 5 sterren.","Topscore","⭐");
-  add("b",L([1,5,10,25]),lo,"Geef # keer 2 sterren of minder.","Streng","👎");
-  add("b",L([1,3,10,25,50]),mx(bc),"Check # keer chips van hetzelfde merk in.","Merkentrouw","🏷️");
-  add("x",L([5,10,25,50,100,250,500,1000]),likes,"Krijg in totaal # likes op je check-ins.","Likes","👍");
-  add("x",L([1,5,10,25,50,100,250,500]),cms,"Plaats # reacties op check-ins.","Reacties","💬");
-  add("x",L([1,3,5,10,25,50,100]),fols,"Krijg # volgers.","Volgers","🤝");
-  add("x",L([1,5,10,25]),fing,"Volg # andere gebruikers.","Volgend","👀");
-  add("x",L([1,5,10,25,50,100]),tgd,"Tag # keer een vriend bij je check-in.","Taggen","🏷️");
-  add("x",L([1,5,10,25,50]),tgm,"Word # keer door een vriend getagd.","Getagd","📣");
-  add("t",L([3,7,14,30,60,100]),best,"Check # dagen achter elkaar in.","Streak","🔥");
-  add("t",L([3,5,10]),mx(dc),"Check # keer in op één dag.","Per dag","⚡");
-  add("t",L([10,25,50,100]),mx(mc),"Check # keer in binnen één kalendermaand.","Per maand","📅");
-  add("a",L([1,5,10,25,50,100,250]),made.length,"Voeg # nieuwe chips toe aan de database.","Toegevoegd","➕");
-  add("a",L([1,5,10,25,50,100]),madeBc,"Voeg # nieuwe chips toe die een barcode hebben.","Barcodes","🔖");
+  var n=ps.length,avg=n?sum/n:0,out=[],ix=0;
+  function ico(){return BPOOL[ix++]||"🏅"}
+  function add(cat,key,v,desc){BLAD[key].forEach(function(t){out.push({k:cat,i:ico(),n:t[1],d:desc.replace("#",t[0]),v:v,g:t[0]})})}
+  function one(name,desc,v,g){out.push({k:"z",i:ico(),n:name,d:desc,v:v,g:g||1})}
+  add("n","n",n,"Plaats # check-ins.");
+  add("c","c",keys(c).length,"Check # verschillende chips in. Elke chips telt één keer, ook als je hem vaker incheckt.");
+  add("m","m",keys(b).length,"Check chips in van # verschillende merken.");
+  var fk=FLAV.map(function(f){return f[0]}).concat(["Naturel & zout"]),fi={"Paprika":"🫑","Barbecue":"🍖","Kaas":"🧀","Zure room & ui":"🧅","Zout & azijn":"🧂","Pittig":"🌶️","Kip":"🍗","Zoet":"🍯","Kruiden":"🌿","Naturel & zout":"🍘"};
+  fk.forEach(function(f){[[10,"-proever","","Proever"],[40,"-kenner","✨","Kenner"],[100,"-koning","👑","Koning"]].forEach(function(t){out.push({k:"s",i:(fi[f]||"🍘")+t[2],n:f+t[1],d:"Check "+t[0]+" chips met smaakrichting "+f+" in.",v:cat[f]||0,g:t[0]})})});
+  add("w","land",keys(ctr).length,"Check in met je locatie aan in # verschillende landen. De plaatsnaam bij je check-in bepaalt het land.");
+  add("w","plaats",keys(pl).length,"Check in op # verschillende plaatsen.");
+  add("f","foto",foto,"Plaats # check-ins met een foto.");
+  add("f","rev",rev,"Schrijf bij # check-ins een recensie.");
+  add("f","dossier",dos,"Plaats # check-ins met foto, recensie én locatie tegelijk.");
+  add("b","hi",hi,"Geef # keer de volle 5 sterren.");
+  add("b","lo",lo,"Geef # keer 2 sterren of minder.");
+  add("b","bl",mx(bc),"Check # keer chips van hetzelfde merk in.");
+  add("b","samechip",mx(cc),"Check dezelfde chips # keer in.");
+  add("x","likes",likes,"Krijg in totaal # likes op je check-ins.");
+  add("x","cms",cms,"Plaats # reacties op check-ins.");
+  add("x","fols",fols,"Krijg # volgers.");
+  add("x","fing",fing,"Volg # andere gebruikers.");
+  add("x","tgd",tgd,"Tag # keer een vriend bij je check-in.");
+  add("x","tgm",tgm,"Word # keer door een vriend getagd.");
+  add("t","streak",run(keys(days).map(Number)),"Check # dagen achter elkaar in.");
+  add("t","perdag",mx(dc),"Check # keer in op één dag.");
+  add("t","permaand",mx(mc),"Check # keer in binnen één kalendermaand.");
+  add("t","weken",run(keys(wk).map(Number)),"Check # weken achter elkaar minstens één keer in.");
+  add("t","maanden",keys(mc).length,"Check in # verschillende kalendermaanden.");
+  add("t","weekend",wend,"Check # keer in op een zaterdag of zondag.");
+  add("a","made",made.length,"Voeg # nieuwe chips toe aan de database.");
+  add("a","madebc",madeBc,"Voeg # nieuwe chips toe die een barcode hebben.");
+  add("a","trend",trend,"Voeg # chips toe die minstens 2 anderen ook inchecken.");
+  one("Nachtraaf","Check 10 keer in tussen middernacht en 5 uur 's nachts.",night,10);
+  one("Vroege vogel","Check 10 keer in tussen 5 en 7 uur 's ochtends.",early,10);
+  one("Kerstknabbel","Check in op 25 december.",ev["12-25"]?1:0);
+  one("Oud en nieuw","Check in op 31 december.",ev["12-31"]?1:0);
+  one("Eerste van het jaar","Check in op 1 januari.",ev["1-1"]?1:0);
+  one("Valentijnsknabbel","Check in op 14 februari.",ev["2-14"]?1:0);
+  one("Oranjekoorts","Check in op Koningsdag, 27 april.",ev["4-27"]?1:0);
+  one("Spookchips","Check in op 31 oktober.",ev["10-31"]?1:0);
+  one("Sinterklaaschips","Check in op 5 december.",ev["12-5"]?1:0);
+  var cats=fk.length;
+  one("Smaakcompleet","Check minstens 1 chips in van elke smaakrichting.",fk.filter(function(f){return (cat[f]||0)>=1}).length,cats);
+  one("Smaakspecialist","Check minstens 10 chips in van elke smaakrichting.",fk.filter(function(f){return (cat[f]||0)>=10}).length,cats);
+  one("Smaakkoning","Check minstens 40 chips in van elke smaakrichting.",fk.filter(function(f){return (cat[f]||0)>=40}).length,cats);
+  var big=0,small={};ps.forEach(function(x){if(x.size>=250)big++;if(x.size>0&&x.size<=40)small[x.pid]=1});
+  one("Zwaargewicht","Check 5 keer een grote zak van 250 gram of meer in.",big,5);
+  one("Kleintje","Check 10 verschillende minizakjes van 40 gram of minder in.",keys(small).length,10);
+  one("Weldoener","Houd na minstens 50 check-ins een gemiddelde van 4,0 of hoger.",n>=50&&avg>=4?1:0);
+  one("Kritische kenner","Houd na minstens 50 check-ins een gemiddelde van 2,5 of lager.",n>=50&&avg<=2.5?1:0);
+  one("Showtime","Zet je jaaroverzicht aan op je profiel.",PM[u]&&PM[u].wrapped?1:0);
+  var pu=PM[u]||{};
+  one("Gezicht van Chipstrack","Vul je profiel compleet in: foto, voornaam en land.",pu.avatar&&pu.first&&pu.country?1:0);
+  var tot={};D.posts.forEach(function(x){tot[x.uid]=(tot[x.uid]||0)+1});
+  var rk=keys(tot).sort(function(a,b){return tot[b]-tot[a]}),pos=rk.indexOf(u);
+  one("Podium","Sta bij minstens 25 check-ins in de top 3 van de ranglijst.",n>=25&&pos>=0&&pos<3?1:0);
+  one("Aanvoerder","Sta bij minstens 50 check-ins bovenaan de ranglijst.",n>=50&&pos===0?1:0);
   return out.slice(0,250);
 }
 var BGOPEN=false;try{BGOPEN=localStorage.getItem("cs_bgo")==="1"}catch(e){}
@@ -959,7 +1021,7 @@ function openBadgeInfo(u){
      return '<div class="card" style="padding:12px;margin:8px 0"><div class="name" style="margin-bottom:6px">'+c[1]+'</div>'+keys(sub).map(function(k){
        var a=sub[k],nx=a.filter(function(x){return x.v<x.g})[0],d0=a[0].d;
        var line=k.replace("#",'<b>…</b>');
-       return '<div style="padding:6px 0;border-top:1px solid var(--line)"><div class="meta">'+esc(k).replace("#","…")+'</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0">'+a.map(function(x){var ok=x.v>=x.g;return '<span title="'+esc(x.n+": "+x.d)+'" style="font-size:.78rem;padding:3px 8px;border-radius:99px;background:'+(ok?'var(--soft,#fff4cc)':'#f3f3f1;color:#8a8a84')+'">'+x.i+' '+x.g+(ok?' ✓':'')+'</span>'}).join("")+'</div>'+(nx?'<div class="meta">Volgende: '+esc(nx.n)+' ('+Math.min(nx.v,nx.g)+' van '+nx.g+')</div>':'<div class="meta">Alles behaald ✓</div>')+'</div>'}).join("")+'</div>';
+       return '<div style="padding:6px 0;border-top:1px solid var(--line)"><div class="meta">'+esc(k).replace("#","…")+'</div><div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0">'+a.map(function(x){var ok=x.v>=x.g;return '<span title="'+esc(x.n+": "+x.d)+'" style="font-size:.78rem;padding:3px 8px;border-radius:99px;background:'+(ok?'var(--soft,#fff4cc)':'#f3f3f1;color:#8a8a84')+'">'+x.i+' '+(a.length===1?esc(x.n):x.g)+(ok?' ✓':'')+'</span>'}).join("")+'</div>'+(nx?'<div class="meta">Volgende: '+esc(nx.n)+' ('+Math.min(nx.v,nx.g)+' van '+nx.g+')</div>':'<div class="meta">Alles behaald ✓</div>')+'</div>'}).join("")+'</div>';
    }).join("")+'</div></div>';
   $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
 }
