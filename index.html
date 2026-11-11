@@ -267,6 +267,7 @@ function nid(){return Date.now().toString(36)+Math.random().toString(36).slice(2
 function toast(m){var t=document.createElement("div");t.className="toast";t.textContent=m;document.body.appendChild(t);setTimeout(function(){t.remove()},2600)}
 function imgOk(u){return OKIMG.test(u||"")?u:""}
 function fmtG(n){return (Math.round(+n*10)/10)+" g"}
+function isMod(){return !!(PM[uid]&&PM[uid].admin)}
 function placeTag(p){return p&&p.place?' · 📍 '+esc(p.place):''}
 function when(ts){return new Date(ts).toLocaleString("nl-NL",{day:"numeric",month:"long",year:"numeric",hour:"2-digit",minute:"2-digit"})}
 function dshort(ts){return new Date(ts).toLocaleDateString("nl-NL",{month:"short",year:"numeric"})}
@@ -288,7 +289,7 @@ async function loadAll(){
   for(var i=0;i<r.length;i++)if(r[i].error)throw r[i].error;
   var g=function(k){return r[k].data||[]},ms=function(x){return +new Date(x)};
   D.profiles=g(0).map(function(x){return{id:x.id,username:x.username,first:x.first_name||"",last:x.last_name||"",avatar:x.avatar_url||"",admin:!!x.is_admin,country:x.country||""}});PM={};D.profiles.forEach(function(p){PM[p.id]=p});
-  D.products=g(1).map(function(x){return{id:x.id,code:x.barcode||"",brand:x.brand,variant:x.variant||"",flavor:x.flavor,type:x.type||"",size:+x.size_g,uid:x.created_by,ts:ms(x.created_at)}});PR={};D.products.forEach(function(p){PR[p.id]=p});
+  D.products=g(1).map(function(x){return{id:x.id,code:x.barcode||"",brand:x.brand,variant:x.variant||"",flavor:x.flavor,type:x.type||"",size:+x.size_g,photo:x.photo||"",uid:x.created_by,ts:ms(x.created_at)}});PR={};D.products.forEach(function(p){PR[p.id]=p});
   D.posts=g(2).map(function(x){return mkPost({id:x.id,uid:x.user_id,pid:x.product_id,taste:x.taste==null?null:+x.taste,tex:x.texture==null?null:+x.texture,rating:+x.rating,img:x.photo||"",text:x.review||"",place:x.place||"",ts:ms(x.created_at)},PR[x.product_id])});
   D.likes=g(3).map(function(x){return{id:safe(x.checkin_id+"_"+x.user_id),post:x.checkin_id,uid:x.user_id,ts:ms(x.created_at)}});
   D.comments=g(4).map(function(x){return{id:x.id,post:x.checkin_id,uid:x.user_id,text:x.body,ts:ms(x.created_at)}});
@@ -330,7 +331,7 @@ function toggleFollow(u){if(!gate()||u===uid)return;var id=safe(uid+"_"+u);if(fo
 function pkey(x){return [x.brand,x.variant,x.flavor,x.type,Math.round(x.size)].map(function(v){return String(v).trim().toLowerCase()}).join("|")}
 function updateCheckin(id,f){
   if(!gate())return false;
-  var p=D.posts.filter(function(x){return x.id===id})[0];if(!p||p.uid!==uid)return false;
+  var p=D.posts.filter(function(x){return x.id===id})[0];if(!p||(p.uid!==uid&&!isMod()))return false;
   if(String(id).indexOf("tmp")===0){toast("Even wachten, je check-in wordt nog opgeslagen.");return false}
   var old=PR[p.pid],nk=pkey(f),changed=!old||pkey(old)!==nk,ex=null;
   if(changed){
@@ -379,15 +380,16 @@ async function saveProfile(first,last,avatarData,country){
 }
 
 /* ---------- berekeningen ---------- */
-function aggr(list){
+function aggr(list,pr){
   var n=list.length,s=0,t=0,x=0,tn=0,xn=0,img="";
   list.forEach(function(p){s+=p.rating;if(p.taste!=null){t+=p.taste;tn++}if(p.tex!=null){x+=p.tex;xn++}});
   list.slice().sort(function(a,b){return b.ts-a.ts}).some(function(p){var u=imgOk(p.img);if(u){img=u;return true}});
+  if(!img){var q0=pr||(list[0]&&PR[list[0].pid]);if(q0)img=imgOk(q0.photo)}
   return{n:n,avg:n?s/n:0,taste:tn?t/tn:null,tex:xn?x/xn:null,img:img};
 }
 function prodList(by,mine){
   var g={};D.posts.forEach(function(p){if(mine&&p.uid!==uid)return;(g[p.pid]=g[p.pid]||[]).push(p)});
-  var out=[];keys(g).forEach(function(id){var pr=PR[id];if(!pr)return;var a=aggr(g[id]),v=by==="smaak"?a.taste:by==="tex"?a.tex:a.avg;if(v==null)return;out.push({p:pr,a:a,v:v})});
+  var out=[];keys(g).forEach(function(id){var pr=PR[id];if(!pr)return;var a=aggr(g[id],pr),v=by==="smaak"?a.taste:by==="tex"?a.tex:a.avg;if(v==null)return;out.push({p:pr,a:a,v:v})});
   return out.sort(function(x,y){return y.v-x.v||y.a.n-x.a.n});
 }
 function userRank(){
@@ -423,7 +425,7 @@ function infoRows(pr){
 function srow(l,v){return '<div class="srow"><span>'+l+'</span>'+stars(v)+'</div>'}
 function cardHtml(p){
   var c=cms(p.id),im=imgOk(p.img),mine=p.uid===uid,h;
-  h='<article class="card"><div class="row">'+avatar(p.uid)+'<div class="grow">'+nameBtn(p.uid)+'<div class="meta">'+when(p.ts)+placeTag(p)+'</div></div>'+(mine?'<button class="act" data-edp="'+p.id+'" aria-label="Aanpassen">'+ic("edit")+'</button><button class="act" data-delp="'+p.id+'" aria-label="Verwijder">'+ic("trash")+'</button>':(acct?'<button class="act" data-rp="checkin:'+p.id+'" aria-label="Melden" title="Melden">⚑</button>':'')+'<button class="act'+(following(p.uid)?" on":"")+'" data-fol="'+esc(p.uid)+'">'+(following(p.uid)?"Volgend":"Volgen")+'</button>')+'</div>';
+  h='<article class="card"><div class="row">'+avatar(p.uid)+'<div class="grow">'+nameBtn(p.uid)+'<div class="meta">'+when(p.ts)+placeTag(p)+'</div></div>'+((mine||isMod())?'<button class="act" data-edp="'+p.id+'" aria-label="Aanpassen">'+ic("edit")+'</button><button class="act" data-delp="'+p.id+'" aria-label="Verwijder">'+ic("trash")+'</button>':(acct?'<button class="act" data-rp="checkin:'+p.id+'" aria-label="Melden" title="Melden">⚑</button>':'')+'<button class="act'+(following(p.uid)?" on":"")+'" data-fol="'+esc(p.uid)+'">'+(following(p.uid)?"Volgend":"Volgen")+'</button>')+'</div>';
   h+='<button class="media" data-chip="'+p.pid+'" aria-label="Bekijk '+esc(p.flavor)+'">'+(im?'<div class="mbg" style="background-image:url('+im+')"></div><img alt="" src="'+im+'">':'')+'<span class="mt">'+esc(p.flavor)+'</span></button>';
   h+='<div class="info">'+infoRows(p)+'</div>';
   if(p.taste!=null)h+=srow("Smaak",p.taste);
@@ -453,7 +455,7 @@ function weekly(){
   var cut=Date.now()-6048e5,w=D.posts.filter(function(p){return p.ts>=cut});if(!w.length)return "";
   var g={},us={},best=null,top=null;
   w.forEach(function(p){(g[p.pid]=g[p.pid]||[]).push(p);us[p.uid]=(us[p.uid]||0)+1});
-  keys(g).forEach(function(id){var a=aggr(g[id]);if(!PR[id])return;if(!best||a.n>best.a.n||(a.n===best.a.n&&a.avg>best.a.avg))best={p:PR[id],a:a}});
+  keys(g).forEach(function(id){var a=aggr(g[id],PR[id]);if(!PR[id])return;if(!best||a.n>best.a.n||(a.n===best.a.n&&a.avg>best.a.avg))best={p:PR[id],a:a}});
   keys(us).forEach(function(u){if(!top||us[u]>top.n)top={u:u,n:us[u]}});
   return '<div class="card"><div class="name">🏆 Van de week</div>'+(best?'<p style="margin:8px 0 4px"><b>Chips van de week:</b> <button class="lnk" data-chip="'+best.p.id+'">'+esc(best.p.brand+" "+best.p.flavor)+'</button> · '+best.a.n+(best.a.n===1?' check-in':' check-ins')+' · '+best.a.avg.toFixed(1)+' ★</p>':'')+(top?'<p style="margin:0"><b>Gebruiker:</b> '+nameBtn(top.u)+' · '+top.n+' check-ins</p>':'')+'<div class="meta" style="margin-top:6px">Gebaseerd op de afgelopen 7 dagen</div></div>';
 }
@@ -506,7 +508,7 @@ function zres(){
   h+='<div class="name" style="margin:14px 0 8px">'+(tk.length||zActive()?"Chips ("+res.length+")":"Nieuwste chips")+'</div>';
   if(!res.length)h+='<div class="card">Geen chips gevonden. Scan een barcode of tik op Review om ze toe te voegen.</div>';
   res.slice(0,50).forEach(function(pr){
-    var a=aggr(D.posts.filter(function(p){return p.pid===pr.id}));
+    var a=aggr(D.posts.filter(function(p){return p.pid===pr.id}),pr);
     h+='<button class="card rk" data-chip="'+pr.id+'"><div class="thumb"'+(a.img?' style="background-image:url('+a.img+')"':'')+'>'+(a.img?'':'🥔')+'</div><div class="grow"><div class="name">'+esc(pr.flavor)+' ('+fmtG(pr.size)+')</div><div class="meta">'+esc(pr.brand+(pr.variant?" · "+pr.variant:"")+(pr.code?" · "+pr.code:""))+'</div><div>'+(a.n?stars(a.avg)+' <b>'+a.avg.toFixed(1)+'</b> <span class="meta">('+a.n+')</span>':'<span class="meta">Nog niet beoordeeld</span>')+'</div></div></button>';
   });
   if(tk.length){
@@ -521,10 +523,11 @@ function zres(){
 function chipPage(id){
   var pr=PR[id],back='<button class="btn ghost sm" data-back="1" style="margin-bottom:12px">← Terug</button>';
   if(!pr)return back+'<div class="card">Deze chips is niet gevonden.</div>';
-  var all=D.posts.filter(function(p){return p.pid===id}),a=aggr(all);
+  var all=D.posts.filter(function(p){return p.pid===id}),a=aggr(all,pr);
   var l=all.filter(function(p){return S.cs==="all"||following(p.uid)}).sort(function(x,y){return y.ts-x.ts});
   var h=back+(a.n?heroHtml(pr,a,a.avg,"div"):'<div class="card"><div class="name">'+esc(pr.flavor)+'</div><div class="info" style="margin-top:8px">'+infoRows(pr)+'</div><p class="meta">Nog niet beoordeeld.</p></div>');
   h+='<button class="btn full" data-addp="'+id+'" style="margin-bottom:12px">Check in</button>';
+  if(acct&&!a.img)h+='<button class="btn ghost full" data-pph="'+id+'" style="margin-bottom:12px">📷 Nog geen foto. Voeg een foto van de verpakking toe</button>';
   h+='<div class="seg"><button data-cs="all" class="'+(S.cs==="all"?"on":"")+'">Iedereen</button><button data-cs="fr" class="'+(S.cs==="fr"?"on":"")+'">Vrienden</button></div>';
   if(!l.length)h+='<div class="card">'+(S.cs==="fr"?"Je vrienden hebben deze chips nog niet ingecheckt.":"Nog geen check-ins.")+'</div>';
   l.forEach(function(p){h+=miniCard(p)});
@@ -537,10 +540,10 @@ function profileHtml(u,tabMode){
   if(!p)return back+'<div class="card">Deze gebruiker is niet gevonden.</div>';
   mine.forEach(function(x){us[x.pid]=1});
   var av=mine.length?mine.reduce(function(s,x){return s+x.rating},0)/mine.length:0,fn=fullname(u),s=mine.length?statusOf(mine.length):null;
-  var h=back+'<div class="card row">'+avatar(u,"big")+'<div class="grow"><div class="name">'+esc(p.username)+(u===uid?" (Jij)":"")+'</div>'+(fn?'<div class="meta">'+esc(fn)+'</div>':'')+(p.country&&ctName(p.country)?'<div class="meta">'+ctFlag(p.country)+' '+esc(ctName(p.country))+'</div>':'')+'</div></div>';
-  if(u===uid)h+='<div class="row" style="margin-bottom:12px"><button class="btn grow" data-edit="1">'+ic("edit")+' Profiel bewerken</button><button class="btn ghost" data-g="logout">Uitloggen</button></div>'+(PM[uid]&&PM[uid].admin?'<button class="btn full" data-adm="1" style="margin-bottom:12px">Beheer chips</button>':'')+'<button class="lnk" data-priv="1" style="margin:0 0 12px">Privacyverklaring</button>';
+  var h=back+'<div class="card row">'+avatar(u,"big")+'<div class="grow"><div class="name">'+esc(p.username)+(u===uid?" (Jij)":"")+(p.admin?' <span class="chip" style="font-size:.7rem;padding:2px 8px;vertical-align:middle">Moderator</span>':'')+'</div>'+(fn?'<div class="meta">'+esc(fn)+'</div>':'')+(p.country&&ctName(p.country)?'<div class="meta">'+ctFlag(p.country)+' '+esc(ctName(p.country))+'</div>':'')+'</div></div>';
+  if(u===uid)h+='<div class="row" style="margin-bottom:12px"><button class="btn grow" data-edit="1">'+ic("edit")+' Profiel bewerken</button><button class="btn ghost" data-g="logout">Uitloggen</button></div>'+(PM[uid]&&PM[uid].admin?'<button class="btn full" data-adm="1" style="margin-bottom:12px">Moderatie</button>':'')+'<button class="lnk" data-priv="1" style="margin:0 0 12px">Privacyverklaring</button>';
   else h+='<button class="btn full" data-fol="'+esc(u)+'" style="margin-bottom:12px">'+(following(u)?"Volgend ✓":"Volgen")+'</button>'+(acct?'<button class="lnk" data-rp="user:'+esc(u)+'" style="margin:-4px 0 12px">Gebruiker melden</button>':'');
-  h+=badgesHtml(u);
+  h+=topHtml(u)+compareHtml(u)+badgesHtml(u);
   h+='<div class="stat"><div><b>'+mine.length+'</b>check-ins</div><div><b>'+keys(us).length+'</b>chips</div><div><b>'+(av?av.toFixed(1):"–")+'</b>gemiddeld</div></div>';
   if(!mine.length)h+='<div class="card">'+(u===uid?"Nog geen check-ins. Tik op Review om je eerste chips te beoordelen.":"Deze gebruiker heeft nog niets ingecheckt.")+'</div>';
   mine.forEach(function(x){h+=cardHtml(x)});
@@ -613,10 +616,16 @@ function openComments(pid){
   }
   renderCm();
 }
+function delComment(id){
+  var c=D.comments.filter(function(x){return x.id===id})[0];if(!c||!acct)return;
+  if(!confirm(c.uid===uid?"Deze reactie verwijderen?":"Reactie van "+uname(c.uid)+" verwijderen?"))return;
+  D.comments=D.comments.filter(function(x){return x.id!==id});renderCm();render();
+  qrun(function(){return SB.from("comments").delete().eq("id",id)});
+}
 function renderCm(){
   var el=$("cml");if(!el){openCmId=null;return}
   var l=cms(openCmId);
-  el.innerHTML=l.length?l.map(function(x){return '<div class="cm"><div class="row">'+avatar(x.uid,"sm")+'<div class="grow">'+nameBtn(x.uid)+'<div class="meta">'+when(x.ts)+'</div></div>'+(acct&&x.uid!==uid?'<button class="act" data-rp="comment:'+x.id+'" aria-label="Melden" title="Melden">⚑</button>':'')+'</div><div style="margin-top:6px;white-space:pre-wrap;word-break:break-word">'+esc(x.text)+'</div></div>'}).join(""):'<p style="text-align:center;margin:60px 0">Wees de eerste om te reageren...</p>';
+  el.innerHTML=l.length?l.map(function(x){return '<div class="cm"><div class="row">'+avatar(x.uid,"sm")+'<div class="grow">'+nameBtn(x.uid)+'<div class="meta">'+when(x.ts)+'</div></div>'+(acct&&x.uid!==uid?'<button class="act" data-rp="comment:'+x.id+'" aria-label="Melden" title="Melden">⚑</button>':'')+(acct&&(x.uid===uid||isMod())&&String(x.id).indexOf("tmp")!==0?'<button class="act" data-delc="'+x.id+'" aria-label="Reactie verwijderen" title="Verwijderen">'+ic("trash")+'</button>':'')+'</div><div style="margin-top:6px;white-space:pre-wrap;word-break:break-word">'+esc(x.text)+'</div></div>'}).join(""):'<p style="text-align:center;margin:60px 0">Wees de eerste om te reageren...</p>';
 }
 function photoPicker(sq,size,cb){
   var m=$("modal2");
@@ -713,14 +722,14 @@ function locPref(v){try{if(v===undefined)return localStorage.getItem("cs_loc")==
 function openForm(code,pid,epid){
   var pr=pid?PR[pid]:(code?D.products.filter(function(p){return p.code===code})[0]:null),m=$("modal"),img="",manual=false;
   var ep=epid?D.posts.filter(function(x){return x.id===epid})[0]:null;
-  if(epid&&(!ep||ep.uid!==uid||!PR[ep.pid]))return;
+  if(epid&&(!ep||(ep.uid!==uid&&!isMod())||!PR[ep.pid]))return;
   var epr=null;
   if(ep){epr=PR[ep.pid];pr=null;code="";img=imgOk(ep.img)||"";manual=true}
   var carried=false,place=ep?(ep.place||""):"",lmsg="",lbusy=false;
-  if(!ep&&pr){var lp=D.posts.filter(function(x){return x.pid===pr.id&&imgOk(x.img)}).sort(function(a,b){return b.ts-a.ts})[0];if(lp){img=imgOk(lp.img);carried=true}}
+  if(!ep&&pr){var lp=D.posts.filter(function(x){return x.pid===pr.id&&imgOk(x.img)}).sort(function(a,b){return b.ts-a.ts})[0];if(lp){img=imgOk(lp.img);carried=true}else if(imgOk(pr.photo)){img=imgOk(pr.photo);carried=true}}
   function list(k){var o={};D.products.forEach(function(p){if(p[k])o[p[k]]=1});return keys(o).map(function(x){return '<option value="'+esc(x)+'">'}).join("")}
   function rate(id,label,v){return '<div class="srow" style="padding:10px 0 0"><span>'+label+'</span><span id="'+id+'s"></span><b id="'+id+'v"></b></div><input type="range" id="'+id+'" min="0.5" max="5" step="0.5" value="'+v+'" aria-label="'+label+'">'}
-  var bcHtml='<label for="fc">Barcode (optioneel)</label><div class="row"><input id="fc" inputmode="numeric" maxlength="14" placeholder="8 tot 14 cijfers" value="'+esc(code||"")+'" autocomplete="off"><button type="button" class="btn sm" id="fcs">Scan</button></div><div id="fcr"></div>';
+  var bcHtml='<label for="fc">Barcode (optioneel)</label><div class="row"><input id="fc" inputmode="numeric" maxlength="14" placeholder="8 tot 14 cijfers" value="'+esc(code||"")+'" autocomplete="off"><button type="button" class="btn sm" id="fcs">Scan</button></div><div id="fcr"></div><p class="meta" id="ofm" style="margin:4px 0 0" role="status"></p>';
   var top=pr?'<div class="info" style="margin:12px 0">'+infoRows(pr)+'</div>'+(pr.code?'<p class="meta">Barcode '+esc(pr.code)+' wordt overgenomen.</p>':(code?'<p class="meta">De barcode '+esc(code)+' wordt aan deze chips gekoppeld.</p>':'<p class="meta">Deze chips hebben nog geen barcode. Heb je de zak bij de hand? Voeg de barcode toe, dan kan iedereen deze chips voortaan scannen.</p>')+bcHtml)
     :'<p class="meta">'+(ep?'Pas merk, smaak of andere gegevens aan als ze niet klopten. Alleen jouw check-in verandert; andere check-ins blijven bij de oorspronkelijke chips.'+(epr.code?' De barcode blijft bij de oorspronkelijke chips.':''):code?'Barcode '+esc(code)+' staat nog niet in de database. Voeg de chips toe.':'Chips zonder barcode. Vul de gegevens zo volledig mogelijk in, dan koppelen we ze automatisch aan dezelfde chips als iemand later een barcode toevoegt.')+'</p>'
     +'<label for="fb">Merk</label><input id="fb" list="bl" maxlength="40" placeholder="Bijvoorbeeld Walkers" value="'+esc(epr?epr.brand:"")+'"><datalist id="bl">'+list("brand")+'</datalist>'
@@ -741,7 +750,7 @@ function openForm(code,pid,epid){
   $("fx").oninput=function(){$("fcnt").textContent=this.value.length+"/450"};
   $("pp").onclick=function(){photoPicker(false,900,function(u){img=u;$("pv").innerHTML='<div class="pv"><img alt="Gekozen foto" src="'+u+'"><button class="btn ghost sm" id="prm">Verwijderen</button></div>';$("prm").onclick=function(){img="";$("pv").innerHTML=""}})};
   if(ep){$("fx").value=ep.text||"";$("fcnt").textContent=$("fx").value.length+"/450";if(img){$("pv").innerHTML='<div class="pv"><img alt="Gekozen foto" src="'+img+'"><button class="btn ghost sm" id="prm">Verwijderen</button></div>';$("prm").onclick=function(){img="";$("pv").innerHTML=""}}}
-  if(carried&&img){$("pv").innerHTML='<div class="pv"><img alt="Foto van eerdere check-in" src="'+img+'"><button class="btn ghost sm" id="prm">Verwijderen</button></div><p class="meta" style="margin:6px 0 0">Foto van een eerdere check-in. Vervang of verwijder hem als je een eigen foto hebt.</p>';$("prm").onclick=function(){img="";$("pv").innerHTML=""}}
+  if(carried&&img){$("pv").innerHTML='<div class="pv"><img alt="Foto van eerdere check-in" src="'+img+'"><button class="btn ghost sm" id="prm">Verwijderen</button></div><p class="meta" style="margin:6px 0 0">Foto van een eerdere check-in of de verpakking. Vervang of verwijder hem als je een eigen foto hebt.</p>';$("prm").onclick=function(){img="";$("pv").innerHTML=""}}
   function lcDraw(){
     var w=$("lcw");if(!w)return;
     if(place)w.innerHTML='<div class="row"><span class="grow">📍 '+esc(place)+'</span><button type="button" class="btn ghost sm" id="lcx">Verwijderen</button></div>';
@@ -757,7 +766,8 @@ function openForm(code,pid,epid){
   }
   function close(){stopScan();closeModal()}
   $("cx").onclick=close;$("ov").onclick=function(e){if(e.target.id==="ov")close()};
-  if($("fcs"))$("fcs").onclick=function(){scan("fcr",function(c){var v=String(c).replace(/\s+/g,"");$("fc").value=v;$("fcr").innerHTML=""})};
+  if($("fcs"))$("fcs").onclick=function(){scan("fcr",function(c){var v=String(c).replace(/\s+/g,"");$("fc").value=v;$("fcr").innerHTML="";ofLookup(v)})};
+  if($("fc")){$("fc").oninput=function(){var v=this.value.replace(/\s+/g,"");clearTimeout(ofT);ofT=setTimeout(function(){ofLookup(v)},600)};if(code)ofLookup(code)}
   $("ok").onclick=function(){
     stopScan();
     if(ep){
@@ -984,6 +994,7 @@ function privacyHtml(){
   +'<h4>Met welke partijen delen we gegevens?</h4><ul>'
   +'<li><b>Supabase:</b> database, inloggen en opslag van foto\'s.</li>'
   +'<li><b>Vercel:</b> hosting van de app.</li>'
+  +'<li><b>Open Food Facts:</b> alleen als je bij nieuwe chips een barcode invult of scant, zoekt deze dienst de productgegevens erbij. De barcode wordt dan naar deze dienst gestuurd.</li>'
   +'<li><b>OpenStreetMap (Nominatim):</b> alleen als je locatie gebruikt, zoekt deze dienst de plaatsnaam bij je positie.</li>'
   +'<li><b>Apple, Google of Mozilla:</b> alleen bij pushmeldingen, voor het bezorgen van de melding.</li></ul>'
   +'<h4>Toestemming</h4><p>Locatie en pushmeldingen gebruiken we alleen met jouw toestemming. Je kunt die altijd intrekken in de instellingen van je telefoon of browser, of in de app.</p>'
@@ -1000,6 +1011,92 @@ function openPrivacy(){
 (function(){var s=document.createElement("style");s.textContent=".bgs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bg{text-align:center;padding:10px 4px;border-radius:16px;background:var(--soft,#fff4cc);display:grid;gap:2px;align-content:start}.bg .bi{font-size:1.6rem}.bg b{font-size:.78rem;line-height:1.15}.bg small{color:var(--mut,#6a6a64);font-size:.72rem}.bg.lock{background:#f3f3f1;filter:grayscale(1);opacity:.55}.ck{display:flex;gap:10px;align-items:flex-start;font-size:.85rem;text-align:left;color:#141414}.ck input{width:20px;height:20px;padding:0;flex:none;margin-top:2px}.pvbox,.pvbox2{font-size:.9rem;line-height:1.45;text-align:left}.pvbox{background:#fff;color:#141414;border-radius:18px;padding:16px;max-height:55vh;overflow:auto}.pvbox h4,.pvbox2 h4{margin:14px 0 4px;font-size:.98rem}.pvbox h4:first-child,.pvbox2 h4:first-child{margin-top:0}.pvbox p,.pvbox2 p{margin:0 0 6px}.pvbox ul,.pvbox2 ul{margin:0 0 6px;padding-left:18px}";document.head.appendChild(s)})();
 /* ---------- v5 end ---------- */
 
+/* ---------- v6 begin ---------- */
+/* vergelijken */
+function userRates(u){var m={};D.posts.forEach(function(p){if(p.uid===u){var o=m[p.pid]||(m[p.pid]={s:0,n:0});o.s+=p.rating;o.n++}});keys(m).forEach(function(k){m[k]=m[k].s/m[k].n});return m}
+function compareData(u){
+  var a=userRates(uid),b=userRates(u),c=[];
+  keys(a).forEach(function(k){if(b[k]!=null&&PR[k])c.push({p:PR[k],a:a[k],b:b[k],d:Math.abs(a[k]-b[k])})});
+  var match=c.length?Math.round(100*(1-c.reduce(function(s,x){return s+x.d},0)/c.length/4.5)):null;
+  return {list:c.sort(function(x,y){return y.d-x.d||(x.p.brand+x.p.flavor).localeCompare(y.p.brand+y.p.flavor,"nl")}),match:match};
+}
+function cmpRow(u,x,link){
+  var nm=esc(x.p.brand+" "+x.p.flavor);
+  return '<div class="row" style="padding:7px 0;border-top:1px solid var(--line)"><div class="grow" style="min-width:0">'+(link?'<button class="lnk" data-chip="'+x.p.id+'" style="text-align:left;font-weight:700">'+nm+'</button>':'<b>'+nm+'</b>')+'</div><div style="text-align:right;font-size:.85rem;white-space:nowrap">Jij <b>'+x.a.toFixed(1)+'</b> · '+esc(uname(u))+' <b>'+x.b.toFixed(1)+'</b></div></div>';
+}
+function compareHtml(u){
+  if(!acct||u===uid)return "";
+  var c=compareData(u);
+  if(!c.list.length)return '<div class="card"><div class="name">Vergelijken met jou</div><p class="meta" style="margin:6px 0 0">Jullie hebben nog geen chips allebei ingecheckt.</p></div>';
+  return '<div class="card"><div class="row"><div class="name grow">Vergelijken met jou</div><button class="btn ghost sm" data-cmp="'+esc(u)+'">Alles bekijken</button></div><div style="display:flex;align-items:baseline;gap:8px;margin:8px 0 4px"><b style="font-size:1.8rem">'+c.match+'%</b><span class="meta">match op '+c.list.length+' gedeelde chips</span></div>'+c.list.slice(0,3).map(function(x){return cmpRow(u,x,true)}).join("")+'</div>';
+}
+function openCompare(u){
+  var c=compareData(u),m=$("modal");
+  m.innerHTML='<div class="modal" id="ov"><div class="sheet" role="dialog" aria-label="Vergelijken"><div class="row"><div class="name grow">Jij en '+esc(uname(u))+'</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div>'
+   +(c.list.length?'<div style="display:flex;align-items:baseline;gap:8px;margin:8px 0 2px"><b style="font-size:2rem">'+c.match+'%</b><span class="meta">match op '+c.list.length+' gedeelde chips</span></div><p class="meta" style="margin:0 0 8px">De match is hoger als jullie scores dichter bij elkaar liggen. De grootste verschillen staan bovenaan.</p>'+c.list.map(function(x){return cmpRow(u,x,false)}).join(""):'<p class="meta">Jullie hebben nog geen chips allebei ingecheckt.</p>')+'</div></div>';
+  $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
+}
+/* persoonlijke top 10 */
+function topList(u){
+  var m={};
+  D.posts.forEach(function(p){if(p.uid===u){var o=m[p.pid]||(m[p.pid]={s:0,n:0,t:0,tn:0});o.s+=p.rating;o.n++;if(p.taste!=null){o.t+=p.taste;o.tn++}}});
+  return keys(m).filter(function(k){return PR[k]}).map(function(k){var o=m[k];return {p:PR[k],avg:o.s/o.n,n:o.n,t:o.tn?o.t/o.tn:0}})
+    .sort(function(a,b){return b.avg-a.avg||b.n-a.n||b.t-a.t||(a.p.brand+a.p.flavor).localeCompare(b.p.brand+b.p.flavor,"nl")}).slice(0,10);
+}
+function topHtml(u){
+  var l=topList(u);if(!l.length)return "";
+  return '<div class="card"><div class="row"><div class="name grow">Top 10</div><button class="btn ghost sm" data-top="'+esc(u)+'">Bekijken en delen</button></div>'
+   +l.slice(0,3).map(function(x,i){return '<div class="row" style="padding:6px 0;border-top:1px solid var(--line)"><b style="width:1.4em">'+(i+1)+'</b><div class="grow" style="min-width:0">'+esc(x.p.brand+" "+x.p.flavor)+'</div><b>'+x.avg.toFixed(1)+' ★</b></div>'}).join("")+'</div>';
+}
+function openTop(u){
+  var l=topList(u),m=$("modal"),own=u===uid,title=own?"Mijn top 10":"Top 10 van "+uname(u);
+  var txt=(own?"Mijn":"De")+" Chipstrack top 10"+(own?"":" van "+uname(u))+":\n"+l.map(function(x,i){return (i+1)+". "+x.p.brand+" "+x.p.flavor+" ("+x.avg.toFixed(1)+")"}).join("\n");
+  m.innerHTML='<div class="modal" id="ov"><div class="sheet" role="dialog" aria-label="Top 10"><div class="row"><div class="name grow">'+esc(title)+'</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div><p class="meta" style="margin:4px 0 8px">Op basis van het gemiddelde van alle check-ins van '+(own?"jou":esc(uname(u)))+'.</p>'
+   +l.map(function(x,i){var a=aggr(D.posts.filter(function(p){return p.pid===x.p.id}),x.p);return '<button class="card rk" data-chip="'+x.p.id+'" style="margin:8px 0"><span class="av" style="background:#ffc20e;color:#141414;font-weight:800">'+(i+1)+'</span><div class="grow"><div class="name">'+esc(x.p.flavor)+'</div><div class="meta">'+esc(x.p.brand)+' · '+fmtG(x.p.size)+'</div></div><div style="text-align:right"><b>'+x.avg.toFixed(1)+'</b><div>'+stars(x.avg)+'</div></div></button>'}).join("")
+   +'<button class="btn full" id="tsh" style="margin-top:8px">Delen</button></div></div>';
+  $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
+  $("tsh").onclick=function(){
+    var full=txt+"\n\nGemaakt met Chipstrack";
+    if(navigator.share){navigator.share({text:full}).catch(function(){})}
+    else{try{navigator.clipboard.writeText(full).then(function(){toast("Top 10 gekopieerd")},function(){toast("Kopiëren lukt niet")})}catch(e){toast("Kopiëren lukt niet")}}
+  };
+}
+/* foto van de verpakking aanvullen */
+function addProductPhoto(id){
+  if(!gate()||!PR[id])return;
+  photoPicker(false,900,function(u){
+    PR[id].photo=u;render();
+    qrun(async function(){
+      var url=await upload(u,"product");if(!url)return {error:{message:"Foto uploaden mislukt"}};
+      return SB.rpc("set_product_photo",{p_id:id,p_photo:url});
+    });
+    toast("Foto toegevoegd");
+  });
+}
+/* barcode opzoeken bij Open Food Facts */
+var ofT=null;
+function ofLookup(c){
+  var msg=$("ofm");if(!msg||!$("fb")||!/^\d{8,14}$/.test(c))return;
+  if(D.products.some(function(x){return x.code===c})){msg.textContent="";return}
+  msg.textContent="Gegevens opzoeken...";
+  fetch("https://world.openfoodfacts.org/api/v2/product/"+c+".json?fields=product_name,brands,quantity,product_quantity")
+    .then(function(r){return r.json()})
+    .then(function(j){
+      var el=$("ofm");if(!el)return;
+      var pr=j&&j.status===1&&j.product;
+      if(!pr||!(pr.product_name||pr.brands)){el.textContent="Niet gevonden in Open Food Facts. Vul de gegevens zelf in.";return}
+      var br=String(pr.brands||"").split(",")[0].trim(),nm=String(pr.product_name||"").trim();
+      if(br&&nm.toLowerCase().indexOf(br.toLowerCase())===0)nm=nm.slice(br.length).replace(/^[\s\-–:]+/,"").trim();
+      var g=parseFloat(pr.product_quantity);
+      if(!(g>0)){var q=/([\d.,]+)\s*(kg|g)\b/i.exec(pr.quantity||"");if(q)g=parseFloat(q[1].replace(",","."))*(q[2].toLowerCase()==="kg"?1000:1)}
+      function set(id,v){var e=$(id);if(e&&v&&!e.value)e.value=v}
+      set("fb",br);set("ff",nm);if(g>0)set("fs",String(Math.round(g*10)/10));
+      el.textContent="Gegevens opgehaald via Open Food Facts. Controleer ze even.";
+    })
+    .catch(function(){var el=$("ofm");if(el)el.textContent="Opzoeken lukt nu niet. Vul de gegevens zelf in."});
+}
+/* ---------- v6 end ---------- */
+
 /* ---------- beheer (alleen beheerders) ---------- */
 var ADM={sel:{},q:"",rep:[]};
 function normName(s){return String(s).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9]/g,"")}
@@ -1008,7 +1105,7 @@ function dupGroups(){var g={};D.products.forEach(function(p){var k=normName(p.br
 function openAdmin(){
   if(!(PM[uid]&&PM[uid].admin))return;
   var m=$("modal");
-  m.innerHTML='<div class="modal" id="ov"><div class="sheet" role="dialog" aria-label="Beheer chips" style="min-height:70vh"><div class="row"><div class="name grow">Beheer chips</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div><p class="meta" style="margin:6px 0 10px">Tik chips aan om ze te selecteren en voeg dubbele chips samen. De chips met de meeste check-ins blijft bestaan. Met het potlood pas je merk of smaak voor iedereen aan.</p><div id="adbody"></div></div></div>';
+  m.innerHTML='<div class="modal" id="ov"><div class="sheet" role="dialog" aria-label="Moderatie" style="min-height:70vh"><div class="row"><div class="name grow">Moderatie</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div><p class="meta" style="margin:6px 0 10px">Tik chips aan om ze te selecteren en voeg dubbele chips samen. De chips met de meeste check-ins blijft bestaan. Met het potlood pas je merk of smaak voor iedereen aan.</p><div id="adbody"></div></div></div>';
   function line(p){var on=ADM.sel[p.id];return '<div class="row" style="padding:8px 6px;border-bottom:1px solid var(--line);border-radius:10px;'+(on?"background:var(--soft)":"")+'"><button class="grow" data-sel="'+p.id+'" style="text-align:left;background:none;border:0;font:inherit;color:inherit;padding:0;cursor:pointer"><b>'+(on?"✓ ":"")+esc(p.brand+" "+p.flavor)+'</b><br><small class="meta">'+[p.variant,p.type,fmtG(p.size),prodCount(p.id)+" check-ins",p.code?"barcode":""].filter(Boolean).map(esc).join(" · ")+'</small></button><button class="act" data-ap="'+p.id+'" aria-label="Bewerk '+esc(p.flavor)+'">'+ic("edit")+'</button></div>'}
   function draw(){
     var n=keys(ADM.sel).filter(function(k){return ADM.sel[k]&&PR[k]}).length,q=ADM.q.trim().toLowerCase(),g=dupGroups(),h="";
@@ -1204,10 +1301,14 @@ document.addEventListener("click",function(e){
   else if(d.share)openShare(d.share);
   else if(d.adm){openAdmin()}
   else if(d.edp){openForm("",null,d.edp)}
-  else if(d.delp){if(confirm("Deze check-in verwijderen?"))del("posts",d.delp)}
+  else if(d.delp){var dp=D.posts.filter(function(x){return x.id===d.delp})[0];if(confirm(dp&&dp.uid!==uid?"Check-in van "+uname(dp.uid)+" verwijderen?":"Deze check-in verwijderen?"))del("posts",d.delp)}
+  else if(d.delc){delComment(d.delc)}
   else if(d.rp){var rp=d.rp.split(":");openReport(rp[0],rp[1])}
   else if(d.priv){openPrivacy()}
   else if(d.bi){openBadgeInfo(d.bi)}
+  else if(d.cmp){openCompare(d.cmp)}
+  else if(d.top){openTop(d.top)}
+  else if(d.pph){addProductPhoto(d.pph)}
   else if(d.bt){BGOPEN=!BGOPEN;try{localStorage.setItem("cs_bgo",BGOPEN?"1":"0")}catch(e){}render()}
   else if(d.zf){zfModal()}
   else if(d.zr){S.zf=null;render()}
