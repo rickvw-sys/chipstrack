@@ -1130,7 +1130,7 @@ function privacyHtml(){
   +'<h4>Met welke partijen delen we gegevens?</h4><ul>'
   +'<li><b>Supabase:</b> database, inloggen en opslag van foto\'s.</li>'
   +'<li><b>Vercel:</b> hosting van de app.</li>'
-  +'<li><b>Open Food Facts:</b> alleen als je bij nieuwe chips een barcode invult of scant, zoekt deze dienst de productgegevens erbij. De barcode wordt dan naar deze dienst gestuurd.</li>'
+  +'<li><b>Open Food Facts:</b> Productgegevens (merk, variant, smaak en barcode) komen van Open Food Facts en vallen onder de ODbL-licentie. alleen als je bij nieuwe chips een barcode invult of scant, zoekt deze dienst de productgegevens erbij. De barcode wordt dan naar deze dienst gestuurd.</li>'
   +'<li><b>OpenStreetMap (Nominatim):</b> alleen als je locatie gebruikt, zoekt deze dienst de plaatsnaam bij je positie.</li>'
   +'<li><b>Apple, Google of Mozilla:</b> alleen bij pushmeldingen, voor het bezorgen van de melding.</li></ul>'
   +'<h4>Toestemming</h4><p>Locatie en pushmeldingen gebruiken we alleen met jouw toestemming. Je kunt die altijd intrekken in de instellingen van je telefoon of browser, of in de app.</p>'
@@ -1326,6 +1326,98 @@ var ADM={sel:{},q:"",rep:[]};
 function normName(s){return String(s).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9]/g,"")}
 function prodCount(id){return D.posts.filter(function(p){return p.pid===id}).length}
 function dupGroups(){var g={};D.products.forEach(function(p){var k=normName(p.brand)+"|"+normName(p.flavor);(g[k]=g[k]||[]).push(p)});return keys(g).map(function(k){return g[k]}).filter(function(a){return a.length>1})}
+/* ---------- chips importeren uit Open Food Facts (alleen moderator) ---------- */
+var IMP={brand:"",res:[],sel:{},busy:false,msg:"",nl:true,be:true,nocat:false,skip:0};
+var IMPV=["Oven Baked","Deep Ridged","Sensations","Strong","Maxx","Max","Wavy","Gourmet","Poppables","Stax","Ribbel","Ridge Cut","Flat"];
+function impSlug(s){return String(s).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"")}
+function impTitle(s){return s.split(" ").map(function(w){return w.length>2||/^[a-z]/i.test(w)&&w.length>1?w.charAt(0).toUpperCase()+w.slice(1).toLowerCase():w}).join(" ")}
+function impClean(name,brand){
+  var n=String(name||"").replace(/\s+/g," ").trim();if(!n)return null;
+  if(/\b\d+\s?x\b|multipack|giftbox|gift box|\bmix\b|pak van|pack of/i.test(n))return null;
+  var be=brand.replace(/[.*+?^${}()|[\]\\]/g,"\\$&").replace(/['’]s?/g,"['’]?s?");
+  n=n.replace(new RegExp("\\b"+be+"\\b","ig")," ").replace(/\b(lays?|lay['’]s)\b/ig,function(m){return new RegExp("^"+be+"$","i").test(m)?" ":m});
+  var vs=[];
+  if(/ovenbaked/i.test(n)){vs.push("Oven Baked");n=n.replace(/ovenbaked/ig," ")}
+  IMPV.forEach(function(k){var r=new RegExp("\\b"+k.replace(" ","\\s?")+"\\b","i");if(r.test(n)){if(vs.indexOf(k)<0)vs.push(k);n=n.replace(r," ")}});
+  var v=vs.join(" ");
+  n=n.replace(/\b(chips|crisps|potato|aardappelchips|aardappel|snacks?|flavou?red?|flavou?r|smaak|taste|met|with|xl|family|share|party|bag|zak|big|nieuw|new|tortilla)\b/ig," ").replace(/\b\d+([.,]\d+)?\s?(g|gr|gram|kg|ml|cl)\b/ig," ").replace(/[^\p{L}\p{N}&' -]/gu," ").replace(/\s+/g," ").trim();
+  n=n.replace(/^[-&' ]+|[-&' ]+$/g,"");
+  if(!n)return null;
+  if(n.length<2||n.length>60)return null;
+  return {variant:v,flavor:impTitle(n)};
+}
+function openImport(){
+  if(!isMod())return;
+  var m=$("modal2");
+  function draw(){
+    var sel=IMP.res.filter(function(x){return IMP.sel[x.code]}).length,pre=["Lay's","Doritos","Pringles","Bugles","Cheetos","Ruffles","Croky","Estrella","Duyvis","Smiths"];
+    var h='<div class="modal" id="ov2"><div class="sheet" role="dialog" aria-label="Chips importeren" style="min-height:70vh"><div class="row"><div class="name grow">Chips importeren</div><button class="act" id="cx2" aria-label="Sluiten">'+ic("x")+'</button></div>'
+     +'<p class="meta" style="margin:6px 0 10px">Haalt chips op uit Open Food Facts en neemt alleen merk, variant, smaak en barcode over. Kies een merk, controleer de lijst en importeer.</p>'
+     +'<div>'+pre.map(function(b){return '<button type="button" class="btn ghost sm" data-ib="'+esc(b)+'" style="margin:0 6px 6px 0">'+esc(b)+'</button>'}).join("")+'</div>'
+     +'<input id="ibr" placeholder="Merk, bijvoorbeeld Lay\'s" value="'+esc(IMP.brand)+'" maxlength="40" aria-label="Merk" style="margin:8px 0">'
+     +'<label class="ck" style="margin:4px 0"><input type="checkbox" id="inl"'+(IMP.nl?" checked":"")+'><span>Nederland</span></label><label class="ck" style="margin:4px 0"><input type="checkbox" id="ibe"'+(IMP.be?" checked":"")+'><span>België</span></label>'
+     +'<label class="ck" style="margin:4px 0 10px"><input type="checkbox" id="inc"'+(IMP.nocat?" checked":"")+'><span>Alle producten van dit merk (zonder categoriefilter, gebruik dit als je niets vindt)</span></label>'
+     +'<button class="btn full" id="igo"'+(IMP.busy?" disabled":"")+'>'+(IMP.busy?"Bezig...":"Zoeken")+'</button>'
+     +'<p class="meta" role="status" style="margin:8px 0">'+esc(IMP.msg)+'</p>';
+    if(IMP.res.length){
+      h+='<div class="row" style="margin:6px 0"><button class="btn ghost sm" id="ial">Alles</button><button class="btn ghost sm" id="inn">Niets</button></div>';
+      h+=IMP.res.map(function(x){var on=IMP.sel[x.code];return '<button type="button" class="card" data-ik="'+x.code+'" style="display:block;width:100%;text-align:left;padding:10px 12px;margin:6px 0;'+(on?'background:var(--soft)':'')+'"><b>'+(on?"✓ ":"")+esc(x.brand+" "+x.flavor)+'</b><div class="meta">'+[x.variant,x.code].filter(Boolean).map(esc).join(" · ")+'</div></button>'}).join("");
+      h+='<div style="position:sticky;bottom:0;background:var(--bg,#fff);padding:10px 0"><button class="btn full" id="iok"'+(sel&&!IMP.busy?"":" disabled")+'>'+(sel?"Importeer "+sel+" chips":"Niets geselecteerd")+'</button></div>';
+    }
+    h+='</div></div>';m.innerHTML=h;bind();
+  }
+  function bind(){
+    $("cx2").onclick=function(){closeModal("modal2")};$("ov2").onclick=function(e){if(e.target.id==="ov2")closeModal("modal2")};
+    $("ibr").oninput=function(){IMP.brand=this.value};$("inl").onchange=function(){IMP.nl=this.checked};$("ibe").onchange=function(){IMP.be=this.checked};$("inc").onchange=function(){IMP.nocat=this.checked};
+    m.querySelectorAll("[data-ib]").forEach(function(b){b.onclick=function(e){e.stopPropagation();IMP.brand=b.dataset.ib;$("ibr").value=IMP.brand}});
+    m.querySelectorAll("[data-ik]").forEach(function(b){b.onclick=function(e){e.stopPropagation();IMP.sel[b.dataset.ik]=!IMP.sel[b.dataset.ik];var y=m.querySelector(".sheet").scrollTop;draw();m.querySelector(".sheet").scrollTop=y}});
+    $("igo").onclick=function(e){e.stopPropagation();search()};
+    if($("ial"))$("ial").onclick=function(e){e.stopPropagation();IMP.res.forEach(function(x){IMP.sel[x.code]=true});draw()};
+    if($("inn"))$("inn").onclick=function(e){e.stopPropagation();IMP.sel={};draw()};
+    if($("iok"))$("iok").onclick=function(e){e.stopPropagation();run()};
+  }
+  async function search(){
+    var br=IMP.brand.trim();if(!br){IMP.msg="Vul een merk in.";draw();return}
+    if(!IMP.nl&&!IMP.be){IMP.msg="Kies minstens één land.";draw();return}
+    IMP.busy=true;IMP.msg="Zoeken bij Open Food Facts...";IMP.res=[];IMP.sel={};draw();
+    var slug=impSlug(br),cs=[],seen={},res=[],skip=0,bad=0,fail=false;
+    if(IMP.nl)cs.push("en:netherlands");if(IMP.be)cs.push("en:belgium");
+    var have={};D.products.forEach(function(p){if(p.code)have[p.code]=1});
+    for(var ci=0;ci<cs.length;ci++){
+      for(var pg=1;pg<=5;pg++){
+        var u="https://world.openfoodfacts.org/api/v2/search?brands_tags="+encodeURIComponent(slug)+"&countries_tags="+encodeURIComponent(cs[ci])+(IMP.nocat?"":"&categories_tags="+encodeURIComponent("en:crisps"))+"&fields=code,product_name,generic_name,brands&page_size=100&page="+pg,j=null;
+        try{var r=await fetch(u);if(!r.ok)throw 0;j=await r.json()}catch(e){fail=true;break}
+        var l=(j&&j.products)||[];
+        l.forEach(function(p){
+          var c=String(p.code||"").replace(/\D/g,"");
+          if(!/^\d{8,14}$/.test(c)||seen[c])return;seen[c]=1;
+          if(have[c]){skip++;return}
+          var o=impClean(p.product_name||p.generic_name,br);if(!o){bad++;return}
+          res.push({code:c,brand:br,variant:o.variant,flavor:o.flavor});
+        });
+        if(l.length<100)break;
+      }
+    }
+    var kk={};res=res.filter(function(x){var k=[x.brand,x.variant,x.flavor].join("|").toLowerCase();if(kk[k])return false;kk[k]=1;return true});
+    res.sort(function(a,b){return (a.variant+a.flavor).localeCompare(b.variant+b.flavor,"nl")});
+    IMP.res=res;IMP.sel={};res.forEach(function(x){IMP.sel[x.code]=true});IMP.busy=false;
+    IMP.msg=fail&&!res.length?"Verbinding met Open Food Facts mislukt. Probeer het later opnieuw.":(res.length?res.length+" chips gevonden":"Niets gevonden. Controleer de spelling van het merk of zet het categoriefilter uit")+(skip?". "+skip+" al in je database (overgeslagen)":"")+(bad?". "+bad+" producten overgeslagen (multipacks of onduidelijke namen)":"")+(fail&&res.length?". Let op: een deel kon niet worden opgehaald":"")+(res.length?". Controleer de lijst voor je importeert.":".");
+    draw();
+  }
+  async function run(){
+    var l=IMP.res.filter(function(x){return IMP.sel[x.code]});if(!l.length)return;
+    IMP.busy=true;var ok=0,er=0;
+    for(var i=0;i<l.length;i++){
+      IMP.msg="Importeren "+(i+1)+" van "+l.length+"...";draw();
+      var x=l[i],r=await SB.rpc("upsert_product",{p_barcode:x.code,p_brand:x.brand,p_variant:x.variant,p_flavor:x.flavor,p_type:"",p_size:0});
+      if(r.error)er++;else ok++;
+    }
+    IMP.busy=false;IMP.res=[];IMP.sel={};IMP.msg=ok+" chips geïmporteerd"+(er?", "+er+" mislukt (draai eerst verpakking.sql)":"")+".";
+    try{await loadAll()}catch(e){}
+    draw();
+  }
+  draw();
+}
 function openAdmin(){
   if(!(PM[uid]&&PM[uid].admin))return;
   var m=$("modal");
@@ -1333,6 +1425,7 @@ function openAdmin(){
   function line(p){var on=ADM.sel[p.id];return '<div class="row" style="padding:8px 6px;border-bottom:1px solid var(--line);border-radius:10px;'+(on?"background:var(--soft)":"")+'"><button class="grow" data-sel="'+p.id+'" style="text-align:left;background:none;border:0;font:inherit;color:inherit;padding:0;cursor:pointer"><b>'+(on?"✓ ":"")+esc(p.brand+" "+p.flavor)+'</b><br><small class="meta">'+[p.variant,p.type,fmtG(p.size),prodCount(p.id)+" check-ins",p.code?"barcode":""].filter(Boolean).map(esc).join(" · ")+'</small></button><button class="act" data-ap="'+p.id+'" aria-label="Bewerk '+esc(p.flavor)+'">'+ic("edit")+'</button></div>'}
   function draw(){
     var n=keys(ADM.sel).filter(function(k){return ADM.sel[k]&&PR[k]}).length,q=ADM.q.trim().toLowerCase(),g=dupGroups(),h="";
+    h+='<button class="btn full" data-imp="1" style="margin:4px 0 8px">Chips importeren uit Open Food Facts</button>';
     h+='<div class="name" style="font-size:1.05rem;margin-top:6px">Meldingen ('+ADM.rep.length+')</div>'+(ADM.rep.length?ADM.rep.map(repCard).join(""):'<p class="meta">Geen openstaande meldingen.</p>');
     h+='<div class="name" style="font-size:1.05rem;margin-top:16px">Mogelijke dubbelen ('+g.length+')</div>';
     h+=g.length?g.map(function(a){return '<div class="card" style="padding:8px 12px;margin:8px 0">'+a.map(line).join("")+'<button class="btn ghost sm" data-grp="'+a.map(function(p){return p.id}).join(",")+'" style="margin-top:8px">Selecteer deze groep</button></div>'}).join(""):'<p class="meta">Geen dubbelen gevonden op merk en smaak.</p>';
@@ -1353,6 +1446,7 @@ function openAdmin(){
   $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
   $("adbody").onclick=async function(e){
     var t=e.target.closest("button");if(!t)return;
+    if(t.dataset.imp){openImport();return}
     if(t.dataset.rdel||t.dataset.rok){
       var id=t.dataset.rdel||t.dataset.rok,r=ADM.rep.filter(function(x){return x.id===id})[0];if(!r)return;
       if(t.dataset.rdel){
