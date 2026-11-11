@@ -5,6 +5,8 @@
 <script>
 // ===== VUL DEZE 2 REGELS IN (Supabase > Project Settings > API) =====
 var SUPABASE_URL="https://cjnixgeeqsezrepwkwfm.supabase.co",SUPABASE_ANON_KEY="sb_publishable_7_ECMcbL-K_Ma-EvzBVeqw_EfH9EgKC";
+// Optioneel: je e-mailadres voor vragen over privacy (komt in de privacyverklaring)
+var PRIVACY_EMAIL="rickvanweerden@gmail.com";
 // =====================================================================
 </script>
 <meta name="theme-color" content="#ffc20e">
@@ -420,7 +422,7 @@ function infoRows(pr){
 function srow(l,v){return '<div class="srow"><span>'+l+'</span>'+stars(v)+'</div>'}
 function cardHtml(p){
   var c=cms(p.id),im=imgOk(p.img),mine=p.uid===uid,h;
-  h='<article class="card"><div class="row">'+avatar(p.uid)+'<div class="grow">'+nameBtn(p.uid)+'<div class="meta">'+when(p.ts)+placeTag(p)+'</div></div>'+(mine?'<button class="act" data-edp="'+p.id+'" aria-label="Aanpassen">'+ic("edit")+'</button><button class="act" data-delp="'+p.id+'" aria-label="Verwijder">'+ic("trash")+'</button>':'<button class="act'+(following(p.uid)?" on":"")+'" data-fol="'+esc(p.uid)+'">'+(following(p.uid)?"Volgend":"Volgen")+'</button>')+'</div>';
+  h='<article class="card"><div class="row">'+avatar(p.uid)+'<div class="grow">'+nameBtn(p.uid)+'<div class="meta">'+when(p.ts)+placeTag(p)+'</div></div>'+(mine?'<button class="act" data-edp="'+p.id+'" aria-label="Aanpassen">'+ic("edit")+'</button><button class="act" data-delp="'+p.id+'" aria-label="Verwijder">'+ic("trash")+'</button>':(acct?'<button class="act" data-rp="checkin:'+p.id+'" aria-label="Melden" title="Melden">⚑</button>':'')+'<button class="act'+(following(p.uid)?" on":"")+'" data-fol="'+esc(p.uid)+'">'+(following(p.uid)?"Volgend":"Volgen")+'</button>')+'</div>';
   h+='<button class="media" data-chip="'+p.pid+'" aria-label="Bekijk '+esc(p.flavor)+'">'+(im?'<div class="mbg" style="background-image:url('+im+')"></div><img alt="" src="'+im+'">':'')+'<span class="mt">'+esc(p.flavor)+'</span></button>';
   h+='<div class="info">'+infoRows(p)+'</div>';
   if(p.taste!=null)h+=srow("Smaak",p.taste);
@@ -491,17 +493,18 @@ function userRow(x,i,mine){
   var s=statusOf(x.n);
   return '<button class="card rk'+(mine?" me":"")+'" data-user="'+esc(x.u)+'"><div class="pos'+(i<3&&!mine?" t":"")+'">'+(i+1)+'</div><span class="av" style="margin:0 6px">'+(PM[x.u]&&imgOk(PM[x.u].avatar)?'<img alt="" src="'+imgOk(PM[x.u].avatar)+'">':esc(uname(x.u).charAt(0).toUpperCase()))+'</span><div class="grow"><div class="name">'+esc(uname(x.u))+(mine?" (Jij)":"")+'</div></div><b style="font-size:1.4rem">'+x.n+'</b></button>';
 }
-function zoekHtml(){return '<div class="card"><div class="row"><input id="sq" value="'+esc(S.q)+'" placeholder="Merk, smaak, barcode of gebruiker" aria-label="Zoeken" autocomplete="off"><button class="btn sm" data-scan="1">Scan</button></div><div id="reader"></div></div><div id="zres">'+zres()+'</div>'}
+function zoekHtml(){return '<div class="card"><div class="row"><input id="sq" value="'+esc(S.q)+'" placeholder="Merk, smaak, barcode of gebruiker" aria-label="Zoeken" autocomplete="off"><button class="btn sm" data-scan="1">Scan</button></div><div class="row" style="margin-top:8px"><button class="btn ghost sm" data-zf="1">Filters'+(zCount()?' ('+zCount()+')':'')+'</button>'+(zActive()?'<button class="lnk" data-zr="1">Filters wissen</button>':'')+'</div><div id="reader"></div></div><div id="zres">'+zres()+'</div>'}
 function zres(){
   var q=norm(S.q).trim(),tk=q.split(/\s+/).filter(Boolean),h="";
   if(/^\d{8,14}$/.test(q)&&!D.products.some(function(p){return p.code===q}))
     h+='<div class="card"><div class="name">Barcode nog niet in de database</div><p class="meta">'+esc(q)+'</p><button class="btn" data-addcode="'+esc(q)+'">Toevoegen en beoordelen</button></div>';
   var res=D.products.filter(function(p){var hay=norm(p.brand+" "+p.variant+" "+p.flavor+" "+p.type+" "+p.code);return tk.every(function(t){return hay.indexOf(t)>-1})});
-  if(!tk.length)res=D.products.slice().sort(function(a,b){return b.ts-a.ts});
+  if(!tk.length)res=D.products.slice();
+  res=zApply(res);
   var us=tk.length?D.profiles.filter(function(p){var hay=norm(p.username+" "+p.first+" "+p.last);return tk.every(function(t){return hay.indexOf(t)>-1})}):[];
-  h+='<div class="name" style="margin:14px 0 8px">'+(tk.length?"Chips ("+res.length+")":"Nieuwste chips")+'</div>';
+  h+='<div class="name" style="margin:14px 0 8px">'+(tk.length||zActive()?"Chips ("+res.length+")":"Nieuwste chips")+'</div>';
   if(!res.length)h+='<div class="card">Geen chips gevonden. Scan een barcode of tik op Review om ze toe te voegen.</div>';
-  res.slice(0,30).forEach(function(pr){
+  res.slice(0,50).forEach(function(pr){
     var a=aggr(D.posts.filter(function(p){return p.pid===pr.id}));
     h+='<button class="card rk" data-chip="'+pr.id+'"><div class="thumb"'+(a.img?' style="background-image:url('+a.img+')"':'')+'>'+(a.img?'':'🥔')+'</div><div class="grow"><div class="name">'+esc(pr.flavor)+' ('+fmtG(pr.size)+')</div><div class="meta">'+esc(pr.brand+(pr.variant?" · "+pr.variant:"")+(pr.code?" · "+pr.code:""))+'</div><div>'+(a.n?stars(a.avg)+' <b>'+a.avg.toFixed(1)+'</b> <span class="meta">('+a.n+')</span>':'<span class="meta">Nog niet beoordeeld</span>')+'</div></div></button>';
   });
@@ -534,8 +537,9 @@ function profileHtml(u,tabMode){
   mine.forEach(function(x){us[x.pid]=1});
   var av=mine.length?mine.reduce(function(s,x){return s+x.rating},0)/mine.length:0,fn=fullname(u),s=mine.length?statusOf(mine.length):null;
   var h=back+'<div class="card row">'+avatar(u,"big")+'<div class="grow"><div class="name">'+esc(p.username)+(u===uid?" (Jij)":"")+'</div>'+(fn?'<div class="meta">'+esc(fn)+'</div>':'')+(p.country&&ctName(p.country)?'<div class="meta">'+ctFlag(p.country)+' '+esc(ctName(p.country))+'</div>':'')+'</div></div>';
-  if(u===uid)h+='<div class="row" style="margin-bottom:12px"><button class="btn grow" data-edit="1">'+ic("edit")+' Profiel bewerken</button><button class="btn ghost" data-g="logout">Uitloggen</button></div>'+(PM[uid]&&PM[uid].admin?'<button class="btn full" data-adm="1" style="margin-bottom:12px">Beheer chips</button>':'');
-  else h+='<button class="btn full" data-fol="'+esc(u)+'" style="margin-bottom:12px">'+(following(u)?"Volgend ✓":"Volgen")+'</button>';
+  if(u===uid)h+='<div class="row" style="margin-bottom:12px"><button class="btn grow" data-edit="1">'+ic("edit")+' Profiel bewerken</button><button class="btn ghost" data-g="logout">Uitloggen</button></div>'+(PM[uid]&&PM[uid].admin?'<button class="btn full" data-adm="1" style="margin-bottom:12px">Beheer chips</button>':'')+'<button class="lnk" data-priv="1" style="margin:0 0 12px">Privacyverklaring</button>';
+  else h+='<button class="btn full" data-fol="'+esc(u)+'" style="margin-bottom:12px">'+(following(u)?"Volgend ✓":"Volgen")+'</button>'+(acct?'<button class="lnk" data-rp="user:'+esc(u)+'" style="margin:-4px 0 12px">Gebruiker melden</button>':'');
+  h+=badgesHtml(u);
   h+='<div class="stat"><div><b>'+mine.length+'</b>check-ins</div><div><b>'+keys(us).length+'</b>chips</div><div><b>'+(av?av.toFixed(1):"–")+'</b>gemiddeld</div></div>';
   if(!mine.length)h+='<div class="card">'+(u===uid?"Nog geen check-ins. Tik op Review om je eerste chips te beoordelen.":"Deze gebruiker heeft nog niets ingecheckt.")+'</div>';
   mine.forEach(function(x){h+=cardHtml(x)});
@@ -611,7 +615,7 @@ function openComments(pid){
 function renderCm(){
   var el=$("cml");if(!el){openCmId=null;return}
   var l=cms(openCmId);
-  el.innerHTML=l.length?l.map(function(x){return '<div class="cm"><div class="row">'+avatar(x.uid,"sm")+'<div class="grow">'+nameBtn(x.uid)+'<div class="meta">'+when(x.ts)+'</div></div></div><div style="margin-top:6px;white-space:pre-wrap;word-break:break-word">'+esc(x.text)+'</div></div>'}).join(""):'<p style="text-align:center;margin:60px 0">Wees de eerste om te reageren...</p>';
+  el.innerHTML=l.length?l.map(function(x){return '<div class="cm"><div class="row">'+avatar(x.uid,"sm")+'<div class="grow">'+nameBtn(x.uid)+'<div class="meta">'+when(x.ts)+'</div></div>'+(acct&&x.uid!==uid?'<button class="act" data-rp="comment:'+x.id+'" aria-label="Melden" title="Melden">⚑</button>':'')+'</div><div style="margin-top:6px;white-space:pre-wrap;word-break:break-word">'+esc(x.text)+'</div></div>'}).join(""):'<p style="text-align:center;margin:60px 0">Wees de eerste om te reageren...</p>';
 }
 function photoPicker(sq,size,cb){
   var m=$("modal2");
@@ -627,7 +631,7 @@ function openEdit(){
    +'<label for="efn">Voornaam</label><input id="efn" maxlength="40" value="'+esc(p.first)+'" autocomplete="given-name"><label for="eln">Achternaam</label><input id="eln" maxlength="40" value="'+esc(p.last)+'" autocomplete="family-name"><label for="cty">Land waar je woont</label>'+ctBox(p.country)
    +'<label for="eun">Gebruikersnaam</label><input id="eun" value="'+esc(p.username)+'" disabled><p class="meta" style="margin:4px 0 0">Je gebruikersnaam is uniek en kun je niet wijzigen.</p>'
    +'<div style="margin-top:18px;padding-top:6px;border-top:1px solid var(--line)"><div class="name" style="font-size:1.05rem;margin-top:10px">Wachtwoord wijzigen</div><label for="pw1">Nieuw wachtwoord</label><input id="pw1" type="password" autocomplete="new-password" placeholder="Minstens 6 tekens"><label for="pw2">Herhaal nieuw wachtwoord</label><input id="pw2" type="password" autocomplete="new-password"><p class="meta" id="pwm" style="margin:6px 0 0;min-height:1.2em" role="status"></p><button class="btn full" id="pwok" style="margin-top:8px">Wachtwoord wijzigen</button></div>'
-   +'<div class="row" style="margin-top:14px"><button class="btn ghost" id="ecx">Annuleer</button><button class="btn grow" id="eok">Opslaan</button></div></div></div>';
+   +'<div class="row" style="margin-top:14px"><button class="btn ghost" id="ecx">Annuleer</button><button class="btn grow" id="eok">Opslaan</button></div><div style="margin-top:22px;padding-top:8px;border-top:1px solid var(--line)"><button class="lnk" id="eda" style="color:#c0392b">Account verwijderen</button></div></div></div>';
   $("pwok").onclick=async function(){
     var a=$("pw1").value,b=$("pw2").value,n=$("pwm"),bt=$("pwok");
     if(a.length<6){n.textContent="Kies een wachtwoord van minstens 6 tekens.";return}
@@ -639,6 +643,7 @@ function openEdit(){
     }catch(e){n.textContent="Wijzigen mislukt. Controleer je internetverbinding."}
     bt.disabled=false;
   };
+  $("eda").onclick=function(){openDeleteAccount()};
   $("epk").onclick=function(){photoPicker(true,320,function(u){av=u;$("epv").innerHTML='<img alt="" src="'+u+'">'})};
   function close(){closeModal()}
   $("cx").onclick=close;$("ecx").onclick=close;$("ov").onclick=function(e){if(e.target.id==="ov")close()};
@@ -825,8 +830,159 @@ document.addEventListener("click",function(e){
 var CSS_CT=".ctw{position:relative}.ctl{max-height:230px;overflow:auto;background:#fff;border:1px solid var(--line,#ececea);border-radius:14px;box-shadow:0 8px 24px rgba(0,0,0,.12);margin-top:4px;text-align:left}.ctl[hidden]{display:none}.cto{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line,#ececea);padding:11px 14px;font:inherit;color:#141414;cursor:pointer}.cto:last-child{border-bottom:0}.cto:hover,.cto:focus{background:var(--soft,#fff4cc)}";
 (function(){var s=document.createElement("style");s.textContent=CSS_CT;document.head.appendChild(s)})();
 
+/* ---------- v5 begin ---------- */
+/* badges */
+function placeCountry(pl){var a=String(pl||"").split(",");return a.length>1?ctNorm(a[a.length-1]):""}
+function badgeData(u){
+  var ps=D.posts.filter(function(x){return x.uid===u}),b={},c={},ctr={},foto=0,rev=0,mine={};
+  ps.forEach(function(x){b[normName(x.brand)]=1;c[x.pid]=1;if(imgOk(x.img))foto++;if(x.text)rev++;mine[x.id]=1;var k=placeCountry(x.place);if(k)ctr[k]=1});
+  var likes=D.likes.filter(function(l){return mine[l.post]&&l.uid!==u}).length,cms=D.comments.filter(function(x){return x.uid===u}).length,fols=D.follows.filter(function(f){return f.to===u}).length;
+  var n=ps.length,nb=keys(b).length,nc=keys(c).length,nl=keys(ctr).length;
+  return [
+    {i:"🥔",n:"Eerste check-in",d:"Check je eerste chips in",v:n,g:1},
+    {i:"🍟",n:"Chipsliefhebber",d:"10 check-ins",v:n,g:10},
+    {i:"🔥",n:"Chipsfanaat",d:"50 check-ins",v:n,g:50},
+    {i:"👑",n:"Chipslegende",d:"100 check-ins",v:n,g:100},
+    {i:"🏷️",n:"Merkenjager",d:"5 verschillende merken",v:nb,g:5},
+    {i:"🎖️",n:"Merkenkenner",d:"15 verschillende merken",v:nb,g:15},
+    {i:"🧭",n:"Smaakontdekker",d:"10 verschillende chips",v:nc,g:10},
+    {i:"🔬",n:"Smaakexpert",d:"30 verschillende chips",v:nc,g:30},
+    {i:"🌍",n:"Wereldreiziger",d:"Check in in 3 landen (met locatie)",v:nl,g:3},
+    {i:"📸",n:"Fotograaf",d:"10 check-ins met foto",v:foto,g:10},
+    {i:"✍️",n:"Recensent",d:"10 recensies geschreven",v:rev,g:10},
+    {i:"👍",n:"Populair",d:"25 likes op je check-ins",v:likes,g:25},
+    {i:"💬",n:"Gesprekstarter",d:"10 reacties geplaatst",v:cms,g:10},
+    {i:"🤝",n:"Netwerker",d:"5 volgers",v:fols,g:5}
+  ];
+}
+function badgesHtml(u){
+  var l=badgeData(u),got=l.filter(function(x){return x.v>=x.g}).length;
+  l.sort(function(a,b){return (b.v>=b.g?1:0)-(a.v>=a.g?1:0)||(b.v/b.g)-(a.v/a.g)});
+  return '<div class="card"><div class="name" style="margin-bottom:10px">Badges ('+got+'/'+l.length+')</div><div class="bgs">'+l.map(function(x){var ok=x.v>=x.g;return '<div class="bg'+(ok?"":" lock")+'" title="'+esc(x.d)+'"><span class="bi">'+x.i+'</span><b>'+esc(x.n)+'</b><small>'+(ok?"Behaald":Math.min(x.v,x.g)+"/"+x.g)+'</small></div>'}).join("")+'</div></div>';
+}
+/* zoeken: filters */
+var FLAV=[
+  ["Paprika",/\b(paprika|bell pepper)/],
+  ["Barbecue",/\b(bbq|barbecue|barbeque|smok|rook)/],
+  ["Kaas",/\b(chees|kaas|cheddar|nacho|parmesan|mozzarella|gouda)/],
+  ["Zure room & ui",/\b(sour cream|zure room|onion|uien|ui\b)/],
+  ["Zout & azijn",/\b(vinegar|azijn)/],
+  ["Pittig",/\b(chil|hot\b|spic|pittig|pikant|jalapeno|sriracha|peper|pepper)/],
+  ["Kip",/\b(chicken|kip\b)/],
+  ["Zoet",/\b(sweet|zoet|honey|honing|chocolate|chocola|caramel)/],
+  ["Kruiden",/\b(herb|kruiden|garlic|knoflook|rosemary|rozemarijn|thyme|tijm|oregano)/]
+];
+var FNAT=/\b(natur|zout|salt|original|classic|plain|gezouten)/;
+function flavCats(p){var t=ctNorm(p.flavor+" "+p.variant+" "+p.type),r=[];FLAV.forEach(function(f){if(f[1].test(t))r.push(f[0])});if(!r.length)r.push(FNAT.test(t)?"Naturel & zout":"Overig");return r}
+function zActive(){var f=S.zf;return !!f&&(keys(f.b).length>0||keys(f.c).length>0||(!!f.sort&&f.sort!=="new"))}
+function zCount(){var f=S.zf;return f?keys(f.b).length+keys(f.c).length+((f.sort&&f.sort!=="new")?1:0):0}
+function zApply(res){
+  var f=S.zf||{b:{},c:{},sort:"new"};
+  if(keys(f.b).length)res=res.filter(function(p){return f.b[p.brand.toLowerCase()]});
+  if(keys(f.c).length)res=res.filter(function(p){return flavCats(p).some(function(c){return f.c[c]})});
+  var st={};res.forEach(function(p){st[p.id]=aggr(D.posts.filter(function(x){return x.pid===p.id}))});
+  var s=f.sort||"new";
+  return res.slice().sort(function(a,b){
+    if(s==="top")return (st[b.id].n?st[b.id].avg:-1)-(st[a.id].n?st[a.id].avg:-1)||st[b.id].n-st[a.id].n;
+    if(s==="most")return st[b.id].n-st[a.id].n||(b.ts-a.ts);
+    if(s==="az")return (a.brand+" "+a.flavor).localeCompare(b.brand+" "+b.flavor,"nl");
+    return b.ts-a.ts;
+  });
+}
+function zfModal(){
+  var m=$("modal"),w=S.zf?JSON.parse(JSON.stringify(S.zf)):{b:{},c:{},sort:"new"},more=false;
+  function draw(){
+    var bc={},bn={},cc={};
+    D.products.forEach(function(p){var k=p.brand.toLowerCase();bc[k]=(bc[k]||0)+1;bn[k]=bn[k]||p.brand;flavCats(p).forEach(function(c){cc[c]=(cc[c]||0)+1})});
+    var bl=keys(bc).sort(function(a,b){return bc[b]-bc[a]||bn[a].localeCompare(bn[b],"nl")}),show=more?bl:bl.slice(0,8),cl=keys(cc).sort(function(a,b){return cc[b]-cc[a]});
+    var cnt,SS=S.zf;S.zf=w;cnt=zApply(D.products.slice()).length;S.zf=SS;
+    m.innerHTML='<div class="modal" id="ov"><div class="sheet" role="dialog" aria-label="Filters"><div class="row"><div class="name grow" style="font-size:1.3rem">Filters</div><button class="lnk" id="zrs">Resetten</button></div>'
+     +'<div class="card" style="margin-top:12px"><div class="name" style="margin-bottom:8px">Smaakrichting</div><div class="chips">'+cl.map(function(c){return '<button class="chip'+(w.c[c]?" on":"")+'" data-zc="'+esc(c)+'">'+esc(c)+' ('+cc[c]+')</button>'}).join("")+'</div></div>'
+     +'<div class="card"><div class="name" style="margin-bottom:8px">Merk</div><div class="chips">'+show.map(function(k){return '<button class="chip'+(w.b[k]?" on":"")+'" data-zb="'+esc(k)+'">'+esc(bn[k])+' ('+bc[k]+')</button>'}).join("")+'</div>'+(bl.length>8?'<button class="lnk" data-zm="1" style="margin-top:10px">'+(more?"Minder tonen":"Alle "+bl.length+" merken tonen")+'</button>':'')+(bl.length?'':'<p class="meta" style="margin:0">Nog geen chips.</p>')+'</div>'
+     +'<div class="card"><div class="name" style="margin-bottom:8px">Sorteren op</div><div class="chips">'+[["new","Nieuwste"],["top","Hoogst beoordeeld"],["most","Meeste check-ins"],["az","A tot Z"]].map(function(s){return '<button class="chip'+((w.sort||"new")===s[0]?" on":"")+'" data-zs="'+s[0]+'">'+s[1]+'</button>'}).join("")+'</div></div>'
+     +'<button class="btn full" id="zok">'+cnt+(cnt===1?" chips":" chips")+' tonen</button></div></div>';
+    $("ov").onclick=function(e){
+      var t=e.target.closest("button");
+      if(!t){if(e.target.id==="ov")closeModal();return}
+      if(t.dataset.zc){if(w.c[t.dataset.zc])delete w.c[t.dataset.zc];else w.c[t.dataset.zc]=true;draw()}
+      else if(t.dataset.zb){if(w.b[t.dataset.zb])delete w.b[t.dataset.zb];else w.b[t.dataset.zb]=true;draw()}
+      else if(t.dataset.zs){w.sort=t.dataset.zs;draw()}
+      else if(t.dataset.zm){more=!more;draw()}
+      else if(t.id==="zrs"){w={b:{},c:{},sort:"new"};draw()}
+      else if(t.id==="zok"){S.zf=w;closeModal();render()}
+    };
+  }
+  draw();
+}
+/* melden */
+function openReport(kind,id){
+  if(!gate()||!id||String(id).indexOf("tmp")===0)return;
+  var R=["Ongepaste inhoud","Spam of reclame","Beledigend of pesten","Privacygevoelig","Anders"],sel="",m=$("modal2");
+  var what=kind==="user"?"deze gebruiker":kind==="comment"?"deze reactie":"deze check-in";
+  m.innerHTML='<div class="modal mid" id="ov2"><div class="dlg" role="dialog" aria-label="Melden"><div class="row" style="margin-bottom:8px"><div class="name grow">Melden</div><button class="act" id="cx2" aria-label="Sluiten">'+ic("x")+'</button></div><p class="meta" style="margin:0 0 8px">Waarom wil je '+what+' melden?</p><div class="chips" id="rrs">'+R.map(function(r){return '<button type="button" class="chip" data-rr="'+esc(r)+'">'+esc(r)+'</button>'}).join("")+'</div><label for="rn">Toelichting (optioneel)</label><textarea id="rn" rows="3" maxlength="300"></textarea><p class="meta" id="rm" role="status" style="min-height:1.2em"></p><button class="btn full" id="rok">Melden</button></div></div>';
+  $("cx2").onclick=function(){closeModal("modal2")};$("ov2").onclick=function(e){if(e.target.id==="ov2")closeModal("modal2")};
+  $("rrs").onclick=function(e){var t=e.target.closest("button");if(!t)return;sel=t.dataset.rr;Array.prototype.forEach.call($("rrs").children,function(c){c.classList.toggle("on",c===t)})};
+  $("rok").onclick=async function(){
+    if(!sel){$("rm").textContent="Kies eerst een reden.";return}
+    this.disabled=true;$("rm").textContent="Bezig...";
+    var r=await SB.rpc("report_content",{p_kind:kind,p_target:id,p_reason:sel,p_note:$("rn").value.trim()||null});
+    if(r.error){$("rm").textContent="Melden mislukt. Probeer het later opnieuw.";this.disabled=false;return}
+    closeModal("modal2");toast("Bedankt, je melding is verstuurd.");
+  };
+}
+/* account verwijderen */
+function openDeleteAccount(){
+  if(!acct)return;var m=$("modal2");
+  m.innerHTML='<div class="modal mid" id="ov2"><div class="dlg" role="dialog" aria-label="Account verwijderen"><div class="row" style="margin-bottom:8px"><div class="name grow">Account verwijderen</div><button class="act" id="cx2" aria-label="Sluiten">'+ic("x")+'</button></div><p style="margin:0 0 8px">Je profiel, al je check-ins met foto\'s, likes, reacties en volgers worden definitief verwijderd. Dit kan niet ongedaan worden gemaakt.</p><label for="dv">Typ VERWIJDER om te bevestigen</label><input id="dv" autocomplete="off" autocapitalize="characters"><p class="meta" id="dm" role="status" style="min-height:1.2em"></p><button class="btn full" id="dok" style="background:#c0392b;color:#fff;border-color:#c0392b" disabled>Account definitief verwijderen</button></div></div>';
+  $("cx2").onclick=function(){closeModal("modal2")};$("ov2").onclick=function(e){if(e.target.id==="ov2")closeModal("modal2")};
+  $("dv").oninput=function(){$("dok").disabled=this.value.trim().toUpperCase()!=="VERWIJDER"};
+  $("dok").onclick=async function(){
+    this.disabled=true;$("dm").textContent="Bezig met verwijderen...";
+    try{
+      try{await pushOff()}catch(e){}
+      try{var ls=await SB.storage.from("photos").list(uid,{limit:1000});if(ls.data&&ls.data.length)await SB.storage.from("photos").remove(ls.data.map(function(x){return uid+"/"+x.name}))}catch(e){}
+      var r=await SB.rpc("delete_my_account");
+      if(r.error){$("dm").textContent="Verwijderen mislukt: "+r.error.message;this.disabled=false;return}
+      try{await SB.auth.signOut({scope:"local"})}catch(e){}
+      idok=false;uid="lokaal";PSY="";S.gate="auth";S.tab="feed";S.det=null;
+      closeModal("modal2");closeModal();showGate();render();toast("Je account is verwijderd");
+      try{await loadAll()}catch(e){}
+    }catch(e){$("dm").textContent="Er ging iets mis. Probeer het opnieuw.";this.disabled=false}
+  };
+}
+/* privacyverklaring */
+function privacyHtml(){
+  var c=(typeof PRIVACY_EMAIL==="string"&&PRIVACY_EMAIL.indexOf("@")>0)?'Vragen of een verzoek? Mail naar <b>'+esc(PRIVACY_EMAIL)+'</b>.':'Vragen of een verzoek? Neem contact op met de beheerder van Chipstrack.';
+  return '<h4>Privacyverklaring Chipstrack</h4>'
+  +'<p>Chipstrack is een app om chips te beoordelen en te delen met anderen. Hieronder staat welke gegevens we bewaren en waarom.</p>'
+  +'<h4>Welke gegevens bewaren we?</h4><ul>'
+  +'<li><b>Account:</b> gebruikersnaam, e-mailadres, wachtwoord (versleuteld, wij kunnen het niet lezen) en het land waar je woont. Optioneel: voor- en achternaam en profielfoto.</li>'
+  +'<li><b>Check-ins:</b> welke chips, je scores, eventuele foto en recensie en het tijdstip. Optioneel de plaatsnaam, als je locatie aanzet. Nooit je exacte positie.</li>'
+  +'<li><b>Activiteit:</b> likes, reacties, wie je volgt en wie jou volgt, en meldingen die je indient.</li>'
+  +'<li><b>Pushmeldingen:</b> alleen als je die aanzet, bewaren we een technisch adres van je apparaat om je meldingen te sturen.</li></ul>'
+  +'<h4>Wie kan wat zien?</h4><p>Je gebruikersnaam, naam, profielfoto, land en je check-ins (met foto, recensie en plaatsnaam) zijn zichtbaar voor iedereen die de app opent, ook voor gasten zonder account. Je e-mailadres is alleen voor jou en de beheerder.</p>'
+  +'<h4>Waarvoor gebruiken we ze?</h4><p>Om de app te laten werken: inloggen, check-ins tonen, ranglijsten maken en meldingen sturen. We gebruiken je gegevens niet voor reclame en verkopen ze niet.</p>'
+  +'<h4>Met welke partijen delen we gegevens?</h4><ul>'
+  +'<li><b>Supabase:</b> database, inloggen en opslag van foto\'s.</li>'
+  +'<li><b>Vercel:</b> hosting van de app.</li>'
+  +'<li><b>OpenStreetMap (Nominatim):</b> alleen als je locatie gebruikt, zoekt deze dienst de plaatsnaam bij je positie.</li>'
+  +'<li><b>Apple, Google of Mozilla:</b> alleen bij pushmeldingen, voor het bezorgen van de melding.</li></ul>'
+  +'<h4>Toestemming</h4><p>Locatie en pushmeldingen gebruiken we alleen met jouw toestemming. Je kunt die altijd intrekken in de instellingen van je telefoon of browser, of in de app.</p>'
+  +'<h4>Hoe lang bewaren we ze?</h4><p>Zolang je account bestaat. Verwijder je je account, dan worden je profiel, check-ins, foto\'s, likes, reacties en pushgegevens verwijderd. Back-ups bij Supabase kunnen nog beperkte tijd bestaan.</p>'
+  +'<h4>Jouw rechten</h4><p>Je mag je gegevens inzien, laten verbeteren of laten verwijderen. Je past je profiel aan via Profiel bewerken en verwijdert je account via Profiel bewerken &gt; Account verwijderen. Je kunt een klacht indienen bij de Autoriteit Persoonsgegevens. '+c+'</p>'
+  +'<h4>Leeftijd</h4><p>Chipstrack is voor mensen van 16 jaar en ouder.</p>'
+  +'<h4>Opslag in je browser</h4><p>De app bewaart in je browser alleen je inlogsessie en een paar voorkeuren (zoals of je locatie standaard aan staat). Er zijn geen advertentie- of trackingcookies.</p>';
+}
+function openPrivacy(){
+  var m=$("modal");
+  m.innerHTML='<div class="modal" id="ov"><div class="sheet pvs" role="dialog" aria-label="Privacyverklaring"><div class="row"><div class="name grow">Privacy</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div><div class="pvbox2">'+privacyHtml()+'</div></div></div>';
+  $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
+}
+(function(){var s=document.createElement("style");s.textContent=".bgs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}.bg{text-align:center;padding:10px 4px;border-radius:16px;background:var(--soft,#fff4cc);display:grid;gap:2px;align-content:start}.bg .bi{font-size:1.6rem}.bg b{font-size:.78rem;line-height:1.15}.bg small{color:var(--mut,#6a6a64);font-size:.72rem}.bg.lock{background:#f3f3f1;filter:grayscale(1);opacity:.55}.ck{display:flex;gap:10px;align-items:flex-start;font-size:.85rem;text-align:left;color:#141414}.ck input{width:20px;height:20px;padding:0;flex:none;margin-top:2px}.pvbox,.pvbox2{font-size:.9rem;line-height:1.45;text-align:left}.pvbox{background:#fff;color:#141414;border-radius:18px;padding:16px;max-height:55vh;overflow:auto}.pvbox h4,.pvbox2 h4{margin:14px 0 4px;font-size:.98rem}.pvbox h4:first-child,.pvbox2 h4:first-child{margin-top:0}.pvbox p,.pvbox2 p{margin:0 0 6px}.pvbox ul,.pvbox2 ul{margin:0 0 6px;padding-left:18px}";document.head.appendChild(s)})();
+/* ---------- v5 end ---------- */
+
 /* ---------- beheer (alleen beheerders) ---------- */
-var ADM={sel:{},q:""};
+var ADM={sel:{},q:"",rep:[]};
 function normName(s){return String(s).toLowerCase().replace(/&/g,"and").replace(/[^a-z0-9]/g,"")}
 function prodCount(id){return D.posts.filter(function(p){return p.pid===id}).length}
 function dupGroups(){var g={};D.products.forEach(function(p){var k=normName(p.brand)+"|"+normName(p.flavor);(g[k]=g[k]||[]).push(p)});return keys(g).map(function(k){return g[k]}).filter(function(a){return a.length>1})}
@@ -837,7 +993,8 @@ function openAdmin(){
   function line(p){var on=ADM.sel[p.id];return '<div class="row" style="padding:8px 6px;border-bottom:1px solid var(--line);border-radius:10px;'+(on?"background:var(--soft)":"")+'"><button class="grow" data-sel="'+p.id+'" style="text-align:left;background:none;border:0;font:inherit;color:inherit;padding:0;cursor:pointer"><b>'+(on?"✓ ":"")+esc(p.brand+" "+p.flavor)+'</b><br><small class="meta">'+[p.variant,p.type,fmtG(p.size),prodCount(p.id)+" check-ins",p.code?"barcode":""].filter(Boolean).map(esc).join(" · ")+'</small></button><button class="act" data-ap="'+p.id+'" aria-label="Bewerk '+esc(p.flavor)+'">'+ic("edit")+'</button></div>'}
   function draw(){
     var n=keys(ADM.sel).filter(function(k){return ADM.sel[k]&&PR[k]}).length,q=ADM.q.trim().toLowerCase(),g=dupGroups(),h="";
-    h+='<div class="name" style="font-size:1.05rem;margin-top:6px">Mogelijke dubbelen ('+g.length+')</div>';
+    h+='<div class="name" style="font-size:1.05rem;margin-top:6px">Meldingen ('+ADM.rep.length+')</div>'+(ADM.rep.length?ADM.rep.map(repCard).join(""):'<p class="meta">Geen openstaande meldingen.</p>');
+    h+='<div class="name" style="font-size:1.05rem;margin-top:16px">Mogelijke dubbelen ('+g.length+')</div>';
     h+=g.length?g.map(function(a){return '<div class="card" style="padding:8px 12px;margin:8px 0">'+a.map(line).join("")+'<button class="btn ghost sm" data-grp="'+a.map(function(p){return p.id}).join(",")+'" style="margin-top:8px">Selecteer deze groep</button></div>'}).join(""):'<p class="meta">Geen dubbelen gevonden op merk en smaak.</p>';
     h+='<div class="name" style="font-size:1.05rem;margin-top:16px">Alle chips</div><input id="adq" placeholder="Zoek op merk of smaak" aria-label="Zoeken" value="'+esc(ADM.q)+'" style="margin:8px 0">';
     var l=D.products.filter(function(p){return !q||(p.brand+" "+p.variant+" "+p.flavor+" "+p.type).toLowerCase().indexOf(q)>=0}).sort(function(a,b){return (a.brand+a.flavor).localeCompare(b.brand+b.flavor)}).slice(0,60);
@@ -846,10 +1003,27 @@ function openAdmin(){
     var b=$("adbody"),f=document.activeElement&&document.activeElement.id==="adq";b.innerHTML=h;
     if(f){var i=$("adq");i.focus();i.setSelectionRange(i.value.length,i.value.length)}
   }
-  draw();
+  function repCard(r){
+    var t=r.kind==="checkin"?D.posts.filter(function(x){return x.id===r.target_id})[0]:r.kind==="comment"?D.comments.filter(function(x){return x.id===r.target_id})[0]:PM[r.target_id];
+    var desc=!t?"Deze inhoud bestaat niet meer.":r.kind==="checkin"?t.brand+" "+t.flavor+(t.text?": "+t.text:"")+" ("+uname(t.uid)+")":r.kind==="comment"?t.text+" ("+uname(t.uid)+")":"Gebruiker "+t.username;
+    return '<div class="card" style="padding:10px 12px;margin:8px 0"><b>'+({checkin:"Check-in",comment:"Reactie",user:"Gebruiker"}[r.kind]||"")+' · '+esc(r.reason)+'</b><div class="meta">Gemeld door '+esc(uname(r.reporter_id))+' · '+when(+new Date(r.created_at))+'</div><p style="margin:6px 0;word-break:break-word">'+esc(desc)+'</p>'+(r.note?'<p class="meta" style="margin:0 0 6px">Toelichting: '+esc(r.note)+'</p>':'')+'<div class="row">'+(t&&r.kind!=="user"?'<button class="btn sm" data-rdel="'+r.id+'">Verwijder inhoud</button>':'')+'<button class="btn ghost sm" data-rok="'+r.id+'">Afgehandeld</button></div></div>';
+  }
+  function loadReps(){SB.from("reports").select("*").eq("status","open").order("created_at",{ascending:true}).then(function(r){ADM.rep=r.data||[];if($("adbody"))draw()})}
+  draw();loadReps();
   $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
-  $("adbody").onclick=function(e){
+  $("adbody").onclick=async function(e){
     var t=e.target.closest("button");if(!t)return;
+    if(t.dataset.rdel||t.dataset.rok){
+      var id=t.dataset.rdel||t.dataset.rok,r=ADM.rep.filter(function(x){return x.id===id})[0];if(!r)return;
+      if(t.dataset.rdel){
+        if(!confirm("Deze "+(r.kind==="comment"?"reactie":"check-in")+" definitief verwijderen?"))return;
+        var d1=await SB.rpc("admin_delete_content",{p_kind:r.kind,p_target:r.target_id});if(d1.error){toast("Verwijderen mislukt: "+d1.error.message);return}
+        try{await loadAll()}catch(x){}
+      }else{
+        var d2=await SB.rpc("admin_close_reports",{p_kind:r.kind,p_target:r.target_id});if(d2.error){toast("Afhandelen mislukt: "+d2.error.message);return}
+      }
+      loadReps();return;
+    }
     if(t.dataset.sel){ADM.sel[t.dataset.sel]=!ADM.sel[t.dataset.sel];draw()}
     else if(t.dataset.grp){t.dataset.grp.split(",").forEach(function(i){ADM.sel[i]=true});draw()}
     else if(t.dataset.ap){editProduct(t.dataset.ap)}
@@ -920,7 +1094,9 @@ function gateHtml(){
   if(st==="login")return h+'<div class="gbox"><div class="name">Inloggen</div>'+lg+'<input id="pw" type="password" autocomplete="current-password" placeholder="Wachtwoord" aria-label="Wachtwoord">'+m+'<button class="gb pri" data-g="dologin">Inloggen</button><button class="gl" data-g="forgot">Wachtwoord vergeten?</button><button class="gb" data-g="gback">Terug</button></div>';
   if(st==="forgot")return h+'<div class="gbox"><div class="name">Wachtwoord vergeten</div><p class="meta" style="margin:0 0 10px">Vul je gebruikersnaam of e-mailadres in. Je krijgt een e-mail met een link om een nieuw wachtwoord te kiezen.</p>'+lg+m+'<button class="gb pri" data-g="doforgot">Stuur e-mail</button><button class="gb" data-g="login">Terug naar inloggen</button></div>';
   if(st==="reset")return h+'<div class="gbox"><div class="name">Nieuw wachtwoord kiezen</div><input id="pw" type="password" autocomplete="new-password" placeholder="Nieuw wachtwoord (minstens 6 tekens)" aria-label="Nieuw wachtwoord"><input id="pw2" type="password" autocomplete="new-password" placeholder="Herhaal nieuw wachtwoord" aria-label="Herhaal nieuw wachtwoord">'+m+'<button class="gb pri" data-g="doreset">Wachtwoord opslaan</button></div>';
-  if(st==="register")return h+'<div class="gbox"><div class="name">Account aanmaken</div><input id="un" maxlength="24" autocomplete="off" autocapitalize="none" placeholder="Gebruikersnaam" aria-label="Gebruikersnaam">'+em+'<input id="pw" type="password" autocomplete="new-password" placeholder="Wachtwoord (minstens 6 tekens)" aria-label="Wachtwoord">'+ctBox(CT.code)+m+'<button class="gb pri" data-g="mk">Account aanmaken</button><button class="gb" data-g="gback">Terug</button></div>';
+  var RF=S.rf||{};
+  if(st==="privacy")return h+'<div class="gbox" style="max-width:420px"><div class="pvbox">'+privacyHtml()+'</div><button class="gb pri" data-g="privback">Terug</button></div>';
+  if(st==="register")return h+'<div class="gbox"><div class="name">Account aanmaken</div><input id="un" maxlength="24" autocomplete="off" autocapitalize="none" placeholder="Gebruikersnaam" aria-label="Gebruikersnaam" value="'+esc(RF.un||"")+'">'+em.replace("<input ",'<input value="'+esc(RF.em||"")+'" ')+'<input id="pw" type="password" autocomplete="new-password" placeholder="Wachtwoord (minstens 6 tekens)" aria-label="Wachtwoord">'+ctBox(CT.code)+'<label class="ck"><input type="checkbox" id="agree"'+(RF.agree?" checked":"")+'><span>Ik ben 16 jaar of ouder en ga akkoord met de <button type="button" class="gl" data-g="priv" style="display:inline;width:auto;padding:0;text-decoration:underline">privacyverklaring</button></span></label>'+m+'<button class="gb pri" data-g="mk">Account aanmaken</button><button class="gb" data-g="gback">Terug</button></div>';
   return h+'<div class="gbox"><button class="gb pri" data-g="login">Inloggen</button><button class="gb" data-g="create">Account aanmaken</button><button class="gl" data-g="guest">Doorgaan als gast</button>'+m+'<p class="meta" style="margin:0;text-align:center">Als gast kun je alles bekijken. Inchecken, liken en reageren vraagt een account.</p></div>';
 }
 function showGate(){var g=$("gate");if(S.gate==="app"){g.style.display="none";g.innerHTML="";pushSync();return}g.style.display="flex";g.innerHTML=gateHtml()}
@@ -929,7 +1105,9 @@ async function authAct(a){
   try{
     if(a==="toauth"||a==="gback"){closeModal();S.gate="auth"}
     else if(a==="login")S.gate="login";
-    else if(a==="create"){CT.code="";S.gate="register"}
+    else if(a==="create"){CT.code="";S.rf={};S.gate="register"}
+    else if(a==="priv"){S.rf={un:val("un"),em:val("em"),agree:$("agree").checked};S.pback=S.gate;S.gate="privacy"}
+    else if(a==="privback"){S.gate=S.pback||"auth"}
     else if(a==="guest")S.gate="app";
     else if(a==="forgot")S.gate="forgot";
     else if(a==="doforgot"){
@@ -960,18 +1138,19 @@ async function authAct(a){
       if(r.error)S.gmsg=/confirm/i.test(r.error.message||"")?"Bevestig eerst je e-mailadres via de mail die we je stuurden.":"Gebruikersnaam, e-mailadres of wachtwoord klopt niet.";
       else{uid=r.data.user.id;idok=true;await loadAll();S.gate="app"}
     }else if(a==="mk"){
-      var n=val("un").trim();
+      var n=val("un").trim();S.rf={un:val("un"),em:val("em"),agree:$("agree").checked};
       if(n.length<3||!/^[A-Za-z0-9_.-]+$/.test(n)||n.length>24)S.gmsg="Gebruikersnaam: 3 tot 24 tekens, letters, cijfers, _ . of -";
       else if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val("em").trim()))S.gmsg="Vul een geldig e-mailadres in.";
       else if(val("pw").length<6)S.gmsg="Kies een wachtwoord van minstens 6 tekens.";
       else if(!(CT.code||ctExact(val("cty"))))S.gmsg="Kies je land uit de lijst.";
+      else if(!$("agree").checked)S.gmsg="Bevestig dat je 16 jaar of ouder bent en akkoord gaat met de privacyverklaring.";
       else if(D.profiles.some(function(q){return q.username.toLowerCase()===n.toLowerCase()}))S.gmsg="Deze gebruikersnaam is al bezet.";
       else{
         var r2=await SB.auth.signUp({email:val("em").trim(),password:val("pw"),options:{data:{username:n,country:CT.code||ctExact(val("cty"))}}});
         if(r2.error){var m2=r2.error.message||"";S.gmsg=/already|registered/i.test(m2)?"Dit e-mailadres is al in gebruik. Log in of kies een ander adres.":/database/i.test(m2)?"Deze gebruikersnaam is al bezet.":"Account maken mislukt: "+m2}
         else if(r2.data.user&&r2.data.user.identities&&!r2.data.user.identities.length)S.gmsg="Dit e-mailadres is al in gebruik. Log in of kies een ander adres.";
         else if(!r2.data.session){S.gate="login";S.gmsg="Account gemaakt. Bevestig eerst je e-mail en log daarna in."}
-        else{uid=r2.data.user.id;idok=true;await loadAll();S.gate="app"}
+        else{S.rf={};uid=r2.data.user.id;idok=true;await loadAll();S.gate="app"}
       }
     }
   }catch(e){S.gmsg="Er ging iets mis. Probeer het opnieuw."}
@@ -1007,6 +1186,10 @@ document.addEventListener("click",function(e){
   else if(d.adm){openAdmin()}
   else if(d.edp){openForm("",null,d.edp)}
   else if(d.delp){if(confirm("Deze check-in verwijderen?"))del("posts",d.delp)}
+  else if(d.rp){var rp=d.rp.split(":");openReport(rp[0],rp[1])}
+  else if(d.priv){openPrivacy()}
+  else if(d.zf){zfModal()}
+  else if(d.zr){S.zf=null;render()}
   else if(d.scan)scan("reader",function(c){S.q=c;render()});
   else if(d.addcode){if(gate())openForm(d.addcode)}
   else if(d.addp){if(gate())openForm(null,d.addp)}
