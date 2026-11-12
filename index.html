@@ -10,9 +10,116 @@ var PRIVACY_EMAIL="rickvanweerden@gmail.com";
 var COPYRIGHT_HOLDER="Rick van Weerden";
 // =====================================================================
 </script>
+<script>
+/* Chipstrack like-animatie: chips-icoon + twee chips die proosten en in stukjes vallen.
+   Alles is een functie van de tijd t (seconden), zodat het ook beeld-voor-beeld te filmen is. */
+(function(){
+var INK="#141414",GOLD1="#ffe27a",GOLD2="#f5b400",EDGE="#141414";
+function poly(a,b,rot,n,wave,ph){var p=[],c=Math.cos(rot),s=Math.sin(rot);
+  for(var i=0;i<n;i++){var th=i/n*Math.PI*2,r=1+wave*Math.sin(6*th+ph);var x=a*r*Math.cos(th),y=b*r*Math.sin(th);p.push([x*c-y*s,x*s+y*c])}
+  return p}
+/* SVG-icoon voor in de knop (24x24 viewBox, zelfde lijnstijl als de andere iconen) */
+function iconSvg(filled){
+  var p=poly(9.6,6.6,-.45,56,.065,.6),d="M"+p.map(function(q){return(12+q[0]).toFixed(2)+" "+(12+q[1]).toFixed(2)}).join("L")+"Z";
+  return '<svg class="lkic" width="22" height="22" viewBox="0 0 24 24" fill="'+(filled?"#ffc20e":"none")+'" stroke="'+(filled?INK:"currentColor")+'" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="'+d+'"/><path d="M7 14c3-1 6-4 8-8M10.5 16.5c2.5-1 5-3 6.5-6" stroke-width="1.6" fill="none"/></svg>'}
+function chipPath(ctx,K,rot){var p=poly(1*K,.68*K,rot||0,56,.065,.6);ctx.beginPath();p.forEach(function(q,i){i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1])});ctx.closePath()}
+function clipPath(ctx,K,clip){ctx.beginPath();clip.forEach(function(q,i){i?ctx.lineTo(q[0]*K,q[1]*K):ctx.moveTo(q[0]*K,q[1]*K)});ctx.closePath()}
+function drawChip(ctx,K,clip){
+  ctx.save();
+  if(clip){clipPath(ctx,K,clip);ctx.clip()}
+  var g=ctx.createRadialGradient(-.25*K,-.2*K,.1*K,0,0,1.1*K);g.addColorStop(0,GOLD1);g.addColorStop(1,GOLD2);
+  chipPath(ctx,K);ctx.fillStyle=g;ctx.fill();
+  ctx.strokeStyle="rgba(120,70,0,.55)";ctx.lineWidth=K*.05;ctx.lineCap="round";
+  [[-.55,.15,-.05,-.25,.5,-.5],[-.6,.45,.05,.1,.6,-.15]].forEach(function(r){ctx.beginPath();ctx.moveTo(r[0]*K,r[1]*K);ctx.quadraticCurveTo(r[2]*K,r[3]*K,r[4]*K,r[5]*K);ctx.stroke()});
+  ctx.fillStyle="rgba(160,60,0,.5)";[[.3,.25],[-.35,-.28],[.55,.02],[-.1,.38]].forEach(function(d){ctx.beginPath();ctx.arc(d[0]*K,d[1]*K,K*.035,0,7);ctx.fill()});
+  chipPath(ctx,K);ctx.strokeStyle=EDGE;ctx.lineWidth=K*.09;ctx.lineJoin="round";ctx.stroke();
+  if(clip){ctx.save();chipPath(ctx,K);ctx.clip();clipPath(ctx,K,clip);ctx.lineWidth=K*.05;ctx.stroke();ctx.restore()}
+  ctx.restore();
+}
+function ease(x){x=Math.max(0,Math.min(1,x));return x*x*(3-2*x)}
+function outBack(x){x=Math.max(0,Math.min(1,x));var c=1.9;return 1+(c+1)*Math.pow(x-1,3)+c*Math.pow(x-1,2)}
+function rnd(i){var x=Math.sin(i*127.1+311.7)*43758.5453;return x-Math.floor(x)}
+/* scheurlijnen: 6 stukken per chip */
+var ANG=[0,.9,2.0,3.0,4.1,5.2,6.2832],CTR=[.05,.03];
+var PIECES=(function(){var a=[];for(var k=0;k<6;k++){var a0=ANG[k],a1=ANG[k+1],am=(a0+a1)/2;
+  var P=function(t,r){return[CTR[0]+Math.cos(t)*r,CTR[1]+Math.sin(t)*r*.8]};
+  a.push({poly:[CTR,P(a0,1.7),P(am,1.9+rnd(k)*.2),P(a1,1.7)],mid:am,k:k})}return a})();
+/* ctx staat in css-pixels. (ax,ay) = middelpunt van de like-knop; K = grootte van de chips */
+function draw(ctx,t,ax,ay,K,o){
+  o=o||{};if(t<0.05||t>2.4)return;
+  var mx=ax+K*2.3,my=Math.max(ay-K*3.3,o.minY||-1e9),dir=[-1,1];   // ontmoetingspunt
+  ctx.save();
+  // aanraak-rimpel
+  if(t<.3){var rr=ease(t/.3);ctx.beginPath();ctx.arc(ax,ay,K*(.5+rr*1.1),0,7);ctx.strokeStyle="rgba(20,20,20,"+(.35*(1-rr))+")";ctx.lineWidth=K*.1;ctx.stroke()}
+  for(var s=0;s<2;s++){
+    var d=dir[s];
+    // fase 1 (0.05-0.58): invliegen vanuit de knop; fase 2: proosten
+    var tin=(t-.06)/.52,x,y,rot,sc;
+    var sx=ax+d*K*.2,sy=ay-K*.2;                         // start bij de knop
+    var hx=mx+d*K*1.25,hy=my;                           // net voor de aanraking
+    if(t<.58){var e=outBack(tin);x=sx+(hx-sx)*e;y=sy+(hy-sy)*e-Math.sin(Math.min(1,Math.max(0,tin))*Math.PI)*K*.9;rot=d*(-.9+1.77*ease(tin));sc=.35+.65*ease(tin*1.4)}
+    else if(t<.68){var c=ease((t-.58)/.1);x=hx-d*K*(.47*c);y=hy;rot=d*(.87+.05*c);sc=1+(.1*Math.sin(c*Math.PI))}  // klink: chips botsen
+    else {var wob=Math.sin((t-.68)*38)*Math.exp(-(t-.68)*10);x=hx-d*K*.47+d*wob*K*.05;y=hy;rot=d*.92+wob*.06*d;sc=1}
+    var burst=.92;
+    if(t<burst){
+      ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.scale(sc,sc);
+      // kleine schaduw
+      ctx.shadowColor="rgba(0,0,0,.18)";ctx.shadowBlur=K*.25;ctx.shadowOffsetY=K*.1;
+      drawChip(ctx,K);ctx.restore();
+      // scheurtjes vlak voor het breken
+      if(t>.84){var cr=ease((t-.84)/.08);ctx.save();ctx.translate(x,y);ctx.rotate(rot);ctx.strokeStyle=INK;ctx.lineWidth=K*.06;ctx.lineCap="round";ctx.lineJoin="round";
+        ctx.beginPath();ctx.moveTo(-.1*K*cr,-.55*K*cr);ctx.lineTo(.1*K*cr,-.2*K*cr);ctx.lineTo(-.08*K*cr,.1*K*cr);ctx.lineTo(.12*K*cr,.55*K*cr);ctx.stroke();ctx.restore()}
+    } else {
+      var tau=t-burst,fall=tau;
+      PIECES.forEach(function(pc){
+        var v=2.6+rnd(pc.k+s*7)*2.2,vx=Math.cos(pc.mid+rot)*K*v*.9+d*K*.9,vy=Math.sin(pc.mid+rot)*K*v*.7-K*2.4,g=K*17;
+        var px=x+vx*fall,py=y+vy*fall+.5*g*fall*fall,r2=rot+(rnd(pc.k+3)-.5)*9*fall*(s?1:-1);
+        var al=Math.max(0,Math.min(1,(1.75-t)/.45));if(al<=0)return;
+        ctx.save();ctx.globalAlpha=al;ctx.translate(px,py);ctx.rotate(r2);ctx.scale(.9,.9);drawChip(ctx,K,pc.poly);ctx.restore()});
+      // kruimeltjes
+      for(var i=0;i<12;i++){var a=rnd(i+s*20)*6.283,vv=2+rnd(i+5)*4,cx=x+Math.cos(a)*K*vv*.8*fall+d*K*.6*fall,cy=y+Math.sin(a)*K*vv*.7*fall-K*2*fall+.5*K*19*fall*fall,al2=Math.max(0,Math.min(1,(1.6-t)/.4));
+        if(al2>0){ctx.globalAlpha=al2;ctx.fillStyle=i%3?GOLD2:"#c98700";ctx.beginPath();ctx.arc(cx,cy,K*(.04+rnd(i+9)*.06),0,7);ctx.fill();ctx.globalAlpha=1}}
+    }
+  }
+  // klink-vonk
+  if(t>.6&&t<.9){var q=(t-.6)/.3,ex=mx,ey=my-K*.7;
+    ctx.save();ctx.translate(ex,ey);ctx.globalAlpha=Math.max(0,1-q*1.1);ctx.strokeStyle=INK;ctx.lineWidth=K*.1;ctx.lineCap="round";
+    for(var i=0;i<8;i++){var a=i/8*6.283+.2,r0=K*(.35+q*.35),r1=K*(.6+q*.95);ctx.beginPath();ctx.moveTo(Math.cos(a)*r0,Math.sin(a)*r0);ctx.lineTo(Math.cos(a)*r1,Math.sin(a)*r1);ctx.stroke()}
+    var sp=K*.95*(1-q*.8)*(q<.15?q/.15:1),st=function(a){ctx.save();ctx.rotate(a);ctx.beginPath();ctx.moveTo(0,-sp);ctx.quadraticCurveTo(0,0,sp*.9,0);ctx.quadraticCurveTo(0,0,0,sp);ctx.quadraticCurveTo(0,0,-sp*.9,0);ctx.quadraticCurveTo(0,0,0,-sp);ctx.fillStyle="#fff";ctx.fill();ctx.lineWidth=K*.05;ctx.strokeStyle=INK;ctx.stroke();ctx.restore()};
+    st(0);ctx.restore()}
+  ctx.restore();
+}
+window.LikeFX={draw:draw,iconSvg:iconSvg,DUR:2.0,ease:ease};
+})();
+
+/* spelen op het scherm: eigen canvas over de pagina, volgt de knop */
+LikeFX.play=function(id){
+  try{
+    if(window.matchMedia&&matchMedia("(prefers-reduced-motion:reduce)").matches)return;
+    var W=innerWidth,H=innerHeight,dpr=Math.min(window.devicePixelRatio||1,2),c=document.createElement("canvas");
+    c.width=W*dpr;c.height=H*dpr;c.setAttribute("aria-hidden","true");
+    c.style.cssText="position:fixed;left:0;top:0;width:"+W+"px;height:"+H+"px;pointer-events:none;z-index:99999";
+    document.body.appendChild(c);
+    var ctx=c.getContext("2d"),t0=performance.now(),K=Math.max(22,Math.min(36,W/11)),last=null,vib=false,popped=false,sel='[data-like="'+(window.CSS&&CSS.escape?CSS.escape(id):id)+'"]';
+    (function frame(now){
+      var t=(now-t0)/1000,b=document.querySelector(sel);
+      if(b){var r=b.getBoundingClientRect();last={x:r.left+Math.min(22,r.width/2),y:r.top+r.height/2}}
+      ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,W,H);
+      if(t>=.6&&!vib){vib=true;try{navigator.vibrate&&navigator.vibrate(12)}catch(e){}}
+      if(t>=.9&&!popped&&b){popped=true;var ic=b.querySelector(".lkic");if(ic)ic.classList.add("lkpop")}
+      if(last&&t<2.4){LikeFX.draw(ctx,t,last.x,last.y,K,{minY:K*1.4});requestAnimationFrame(frame)}
+      else c.remove();
+    })(t0);
+  }catch(e){}
+};
+(function(){var s=document.createElement("style");s.textContent=".lkic{display:block}.lkpop{animation:lkpop .45s ease-out}@keyframes lkpop{0%{transform:scale(.6)}45%{transform:scale(1.35)}100%{transform:scale(1)}}";document.head.appendChild(s)})();
+</script>
 <meta name="theme-color" content="#ffc20e">
 <link rel="manifest" href="manifest.webmanifest">
+<meta name="description" content="Chipstrack: beoordeel chips op smaak en textuur, deel je check-ins met vrienden en ontdek de beste chips.">
 <link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Chipstrack">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Chipstrack</title>
@@ -446,7 +553,7 @@ function cardHtml(p){
   if(p.tex!=null)h+=srow("Textuur",p.tex);
   h+='<div class="tot"><div class="row"><b class="grow">TOTAAL</b><b class="tn">'+p.rating.toFixed(1)+'</b></div>'+'<div class="st big">'+stars(p.rating)+'</div></div>';
   if(p.text)h+='<p class="rev">'+esc(p.text)+'</p>';
-  h+='<div class="acts"><button class="pill'+(liked(p.id)?" on":"")+'" data-like="'+p.id+'" aria-label="Like">'+ic("like")+' '+likeCount(p.id)+'</button><button class="pill" data-cm="'+p.id+'" aria-label="Reacties">'+ic("cm")+' '+c.length+'</button><button class="pill" data-share="'+p.id+'" aria-label="Delen">'+ic("send")+'</button></div>';
+  h+='<div class="acts"><button class="pill'+(liked(p.id)?" on":"")+'" data-like="'+p.id+'" aria-label="Like">'+LikeFX.iconSvg(liked(p.id))+' '+likeCount(p.id)+'</button><button class="pill" data-cm="'+p.id+'" aria-label="Reacties">'+ic("cm")+' '+c.length+'</button><button class="pill" data-share="'+p.id+'" aria-label="Delen">'+ic("send")+'</button></div>';
   return h+'</article>';
 }
 function miniCard(p){
@@ -455,7 +562,7 @@ function miniCard(p){
    +(p.taste!=null?'<div class="meta" style="margin-top:6px">Smaak '+p.taste.toFixed(1)+' · Textuur '+(p.tex==null?"–":p.tex.toFixed(1))+'</div>':'')
    +(p.text?'<p class="rev" style="margin:6px 0 0">'+esc(p.text)+'</p>':'')
    +(im?'<img alt="" src="'+im+'" style="width:100%;max-height:220px;object-fit:cover;border-radius:12px;margin-top:8px">':'')
-   +'<div class="acts" style="margin-top:8px"><button class="pill'+(liked(p.id)?" on":"")+'" data-like="'+p.id+'" aria-label="Like">'+ic("like")+' '+likeCount(p.id)+'</button><button class="pill" data-cm="'+p.id+'" aria-label="Reacties">'+ic("cm")+' '+cms(p.id).length+'</button></div></div>';
+   +'<div class="acts" style="margin-top:8px"><button class="pill'+(liked(p.id)?" on":"")+'" data-like="'+p.id+'" aria-label="Like">'+LikeFX.iconSvg(liked(p.id))+' '+likeCount(p.id)+'</button><button class="pill" data-cm="'+p.id+'" aria-label="Reacties">'+ic("cm")+' '+cms(p.id).length+'</button></div></div>';
 }
 function heroInner(pr,a,v){
   return '<span class="hin"><span class="ht">'+esc(pr.flavor)+'</span><span>'+a.n+(a.n===1?" beoordeling":" beoordelingen")+'</span><span>'+stars(v)+' <b>'+v.toFixed(1)+'</b></span>'
@@ -1571,7 +1678,7 @@ document.addEventListener("click",function(e){
   else if(d.fd){S.fd=d.fd;render()}
   else if(d.cs){S.cs=d.cs;render()}
   else if(d.fol)toggleFollow(d.fol);
-  else if(d.like){if(!gate())return;var id=safe(d.like+"_"+uid);if(liked(d.like))del("likes",id);else put("likes",id,{post:d.like,uid:uid,ts:Date.now()})}
+  else if(d.like){if(!gate())return;var id=safe(d.like+"_"+uid);if(liked(d.like))del("likes",id);else{put("likes",id,{post:d.like,uid:uid,ts:Date.now()});LikeFX.play(d.like)}}
   else if(d.cm)openComments(d.cm);
   else if(d.share)openShare(d.share);
   else if(d.adm){openAdmin()}
