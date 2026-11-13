@@ -1109,6 +1109,13 @@ function ctShow(){
 function ctPick(c){var i=$("cty");CT.code=c;if(i)i.value=ctName(c);ctShow()}
 document.addEventListener("input",function(e){if(e.target.id==="cty"){CT.code="";ctShow()}});
 document.addEventListener("focusin",function(e){if(e.target.id==="cty")ctShow()});
+/* Enter in het inlog-/registratiescherm = op de hoofdknop drukken */
+document.addEventListener("keydown",function(e){
+  var t=e.target;if(e.key!=="Enter"||e.isComposing||!t||t.tagName!=="INPUT"||!t.closest||!t.closest("#gate"))return;
+  if(t.type==="checkbox"||t.type==="button"||t.type==="submit")return;
+  var b=t.closest(".gbox")&&t.closest(".gbox").querySelector(".gb.pri");
+  if(b){e.preventDefault();b.click()}
+});
 document.addEventListener("keydown",function(e){if(e.target.id==="cty"&&e.key==="Enter"){var r=ctMatch(e.target.value);if(r.length){e.preventDefault();ctPick(r[0].c)}}});
 document.addEventListener("click",function(e){
   var b=e.target.closest&&e.target.closest("[data-cc]");
