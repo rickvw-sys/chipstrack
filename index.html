@@ -612,7 +612,7 @@ function infoRows(pr){
   var r='<div><span>MERK</span><b>'+esc(pr.brand)+'</b></div>';
   if(pr.variant)r+='<div><span>VARIANT</span><b>'+esc(pr.variant)+'</b></div>';
   if(pr.type)r+='<div><span>TYPE</span><b>'+esc(pr.type)+'</b></div>';
-  return r+'<div><span>VERPAKKING</span><b>'+fmtG(pr.size)+'</b></div>';
+  return r+(+pr.size>0?'<div><span>VERPAKKING</span><b>'+fmtG(pr.size)+'</b></div>':'');
 }
 function srow(l,v){return '<div class="srow"><span>'+l+'</span>'+stars(v)+'</div>'}
 function cardHtml(p){
@@ -637,7 +637,7 @@ function miniCard(p){
 }
 function heroInner(pr,a,v){
   return '<span class="hin"><span class="ht">'+esc(pr.flavor)+'</span><span>'+a.n+(a.n===1?" beoordeling":" beoordelingen")+'</span><span>'+stars(v)+' <b>'+v.toFixed(1)+'</b></span>'
-   +'<span class="hrow"><span>MERK</span><b>'+esc(pr.brand)+'</b></span>'+(pr.variant?'<span class="hrow"><span>VARIANT</span><b>'+esc(pr.variant)+'</b></span>':'')+(pr.type?'<span class="hrow"><span>TYPE</span><b>'+esc(pr.type)+'</b></span>':'')+'<span class="hrow"><span>VERPAKKING</span><b>'+fmtG(pr.size)+'</b></span></span>';
+   +'<span class="hrow"><span>MERK</span><b>'+esc(pr.brand)+'</b></span>'+(pr.variant?'<span class="hrow"><span>VARIANT</span><b>'+esc(pr.variant)+'</b></span>':'')+(pr.type?'<span class="hrow"><span>TYPE</span><b>'+esc(pr.type)+'</b></span>':'')+(+pr.size>0?'<span class="hrow"><span>VERPAKKING</span><b>'+fmtG(pr.size)+'</b></span>':'')+'</span>';
 }
 function heroHtml(pr,a,v,tag){
   var im=a.img;
