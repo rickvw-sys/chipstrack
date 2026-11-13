@@ -753,7 +753,7 @@ function profileHtml(u,tabMode){
   mine.forEach(function(x){us[x.pid]=1});
   var av=mine.length?mine.reduce(function(s,x){return s+x.rating},0)/mine.length:0,fn=fullname(u),s=mine.length?statusOf(mine.length):null;
   var h=back+'<div class="card row">'+avatar(u,"big")+'<div class="grow"><div class="name">'+esc(p.username)+(u===uid?" (Jij)":"")+(p.admin?' <span class="chip" style="font-size:.7rem;padding:2px 8px;vertical-align:middle">Moderator</span>':'')+'</div>'+(fn?'<div class="meta">'+esc(fn)+'</div>':'')+(p.country&&ctName(p.country)?'<div class="meta">'+ctFlag(p.country)+' '+esc(ctName(p.country))+'</div>':'')+'</div></div>';
-  if(u===uid)h+='<div class="row" style="margin-bottom:12px"><button class="btn grow" data-edit="1">'+ic("edit")+' Profiel bewerken</button><button class="btn ghost" data-g="logout">Uitloggen</button></div>'+(PM[uid]&&PM[uid].admin?'<button class="btn full" data-adm="1" style="margin-bottom:12px">Moderatie</button>':'')+'<button class="lnk" data-priv="1" style="margin:0 0 12px">Privacyverklaring</button>';
+  if(u===uid)h+='<div class="row" style="margin-bottom:12px"><button class="btn grow" data-edit="1">'+ic("edit")+' Profiel bewerken</button><button class="btn ghost" data-g="logout">Uitloggen</button></div>'+(PM[uid]&&PM[uid].admin?'<button class="btn full" data-adm="1" style="margin-bottom:12px">Moderatie</button>':'')+'<button class="lnk" data-priv="1" style="margin:0 12px 12px 0">Privacyverklaring</button><button class="lnk" data-terms="1" style="margin:0 0 12px">Gebruiksvoorwaarden</button>';
   else h+='<button class="btn full" data-fol="'+esc(u)+'" style="margin-bottom:12px">'+(following(u)?"Volgend ✓":"Volgen")+'</button>'+(acct?'<button class="lnk" data-rp="user:'+esc(u)+'" style="margin:-4px 0 12px">Gebruiker melden</button>':'');
   h+=wrapCard(u)+topHtml(u)+compareHtml(u)+badgesHtml(u);
   h+='<div class="stat"><div><b>'+mine.length+'</b>check-ins</div><div><b>'+keys(us).length+'</b>chips</div><div><b>'+(av?av.toFixed(1):"–")+'</b>gemiddeld</div></div>';
@@ -1374,6 +1374,26 @@ function privacyHtml(){
   +'<h4>Leeftijd</h4><p>Chipstrack is voor mensen van 16 jaar en ouder.</p>'
   +'<h4>Opslag in je browser</h4><p>De app bewaart in je browser alleen je inlogsessie en een paar voorkeuren (zoals of je locatie standaard aan staat). Er zijn geen advertentie- of trackingcookies.</p>';
 }
+/* gebruiksvoorwaarden */
+function termsHtml(){
+  return '<h4>Gebruiksvoorwaarden Chipstrack</h4>'
+  +'<p>Door een account aan te maken of de app te gebruiken ga je akkoord met deze voorwaarden. Lees ook de privacyverklaring.</p>'
+  +'<h4>1. Wie mag de app gebruiken?</h4><p>Je moet 16 jaar of ouder zijn. Je geeft juiste gegevens op en houdt je wachtwoord geheim. Je bent zelf verantwoordelijk voor wat er met jouw account gebeurt.</p>'
+  +'<h4>2. Wat je plaatst</h4><p>Je check-ins, scores, recensies, reacties, foto\'s en profielgegevens blijven van jou. Door ze te plaatsen geef je Chipstrack toestemming om ze in de app te tonen aan andere gebruikers, voor zover jij ze deelt, en om ze op te slaan zodat de app werkt. Deze toestemming stopt wanneer je de inhoud of je account verwijdert. Plaats alleen foto\'s die je zelf hebt gemaakt of mag gebruiken, en geen foto\'s waarop anderen herkenbaar zijn zonder hun toestemming.</p>'
+  +'<h4>3. Wat niet mag</h4><ul><li>Beledigende, discriminerende, bedreigende of seksueel getinte inhoud.</li><li>Pesten, lastigvallen of doen alsof je iemand anders bent.</li><li>Reclame, spam of misleidende beoordelingen, bijvoorbeeld namens een merk.</li><li>Inhoud die in strijd is met de wet of met rechten van anderen, zoals auteursrechten.</li><li>Het verstoren of misbruiken van de app of het ophalen van gegevens van andere gebruikers.</li></ul>'
+  +'<h4>4. Toezicht en maatregelen</h4><p>Je kunt inhoud melden met de vlag-knop. De beheerders mogen inhoud verwijderen die tegen deze voorwaarden is, en accounts waarschuwen, tijdelijk blokkeren of verwijderen als dat nodig is. Bij ernstige overtredingen kan dat zonder voorafgaande melding.</p>'
+  +'<h4>5. Beoordelingen en gegevens over chips</h4><p>Scores en recensies zijn de persoonlijke mening van gebruikers. Productgegevens worden door gebruikers toegevoegd en kunnen onjuist of verouderd zijn. Chipstrack is niet verbonden aan de merken in de app. Merknamen en logo\'s zijn van hun eigenaren.</p>'
+  +'<h4>6. Eigendom van Chipstrack</h4><p>De app, het ontwerp, de naam en het logo van Chipstrack zijn eigendom van Chipstrack. Je mag ze niet kopi\u00ebren of voor andere doeleinden gebruiken zonder toestemming.</p>'
+  +'<h4>7. Beschikbaarheid</h4><p>We doen ons best om de app goed te laten werken, maar kunnen niet garanderen dat hij altijd beschikbaar of foutloos is. Chipstrack is nog in ontwikkeling: functies kunnen veranderen of verdwijnen.</p>'
+  +'<h4>8. Aansprakelijkheid</h4><p>Je gebruikt de app op eigen risico. Chipstrack is niet aansprakelijk voor schade door het gebruik van de app of door inhoud van gebruikers, behalve bij opzet of grove schuld of als de wet iets anders voorschrijft. Chipstrack geeft geen voedings- of allergie-informatie: lees altijd de verpakking.</p>'
+  +'<h4>9. Stoppen</h4><p>Je kunt je account altijd verwijderen via Profiel &gt; Profiel bewerken &gt; Account verwijderen.</p>'
+  +'<h4>10. Wijzigingen en toepasselijk recht</h4><p>We kunnen deze voorwaarden aanpassen. Bij belangrijke wijzigingen laten we dat in de app weten. Blijf je de app gebruiken, dan ga je akkoord met de nieuwe versie. Nederlands recht is van toepassing.</p>';
+}
+function openTerms(){
+  var m=$("modal");
+  m.innerHTML='<div class="modal" id="ov"><div class="sheet pvs" role="dialog" aria-label="Gebruiksvoorwaarden"><div class="row"><div class="name grow">Voorwaarden</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div><div class="pvbox2">'+termsHtml()+'</div></div></div>';
+  $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
+}
 function openPrivacy(){
   var m=$("modal");
   m.innerHTML='<div class="modal" id="ov"><div class="sheet pvs" role="dialog" aria-label="Privacyverklaring"><div class="row"><div class="name grow">Privacy</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div><div class="pvbox2">'+privacyHtml()+'</div></div></div>';
@@ -1683,8 +1703,9 @@ function gateHtml(){
   if(st==="forgot")return h+'<div class="gbox"><div class="name">Wachtwoord vergeten</div><p class="meta" style="margin:0 0 10px">Vul je gebruikersnaam of e-mailadres in. Je krijgt een e-mail met een link om een nieuw wachtwoord te kiezen.</p>'+lg+m+'<button class="gb pri" data-g="doforgot">Stuur e-mail</button><button class="gb" data-g="login">Terug naar inloggen</button></div>';
   if(st==="reset")return h+'<div class="gbox"><div class="name">Nieuw wachtwoord kiezen</div><input id="pw" type="password" autocomplete="new-password" placeholder="Nieuw wachtwoord (minstens 6 tekens)" aria-label="Nieuw wachtwoord"><input id="pw2" type="password" autocomplete="new-password" placeholder="Herhaal nieuw wachtwoord" aria-label="Herhaal nieuw wachtwoord">'+m+'<button class="gb pri" data-g="doreset">Wachtwoord opslaan</button></div>';
   var RF=S.rf||{};
+  if(st==="terms")return h+'<div class="gbox" style="max-width:420px"><div class="pvbox">'+termsHtml()+'</div><button class="gb pri" data-g="privback">Terug</button></div>';
   if(st==="privacy")return h+'<div class="gbox" style="max-width:420px"><div class="pvbox">'+privacyHtml()+'</div><button class="gb pri" data-g="privback">Terug</button></div>';
-  if(st==="register")return h+'<div class="gbox"><div class="name">Account aanmaken</div><input id="un" maxlength="24" autocomplete="off" autocapitalize="none" placeholder="Gebruikersnaam" aria-label="Gebruikersnaam" value="'+esc(RF.un||"")+'">'+em.replace("<input ",'<input value="'+esc(RF.em||"")+'" ')+'<input id="pw" type="password" autocomplete="new-password" placeholder="Wachtwoord (minstens 6 tekens)" aria-label="Wachtwoord">'+ctBox(CT.code)+'<label class="ck"><input type="checkbox" id="agree"'+(RF.agree?" checked":"")+'><span>Ik ben 16 jaar of ouder en ga akkoord met de <button type="button" class="gl" data-g="priv" style="display:inline;width:auto;padding:0;text-decoration:underline">privacyverklaring</button></span></label>'+m+'<button class="gb pri" data-g="mk">Account aanmaken</button><button class="gb" data-g="gback">Terug</button></div>';
+  if(st==="register")return h+'<div class="gbox"><div class="name">Account aanmaken</div><input id="un" maxlength="24" autocomplete="off" autocapitalize="none" placeholder="Gebruikersnaam" aria-label="Gebruikersnaam" value="'+esc(RF.un||"")+'">'+em.replace("<input ",'<input value="'+esc(RF.em||"")+'" ')+'<input id="pw" type="password" autocomplete="new-password" placeholder="Wachtwoord (minstens 6 tekens)" aria-label="Wachtwoord">'+ctBox(CT.code)+'<label class="ck"><input type="checkbox" id="agree"'+(RF.agree?" checked":"")+'><span>Ik ben 16 jaar of ouder en ga akkoord met de <button type="button" class="gl" data-g="terms" style="display:inline;width:auto;padding:0;text-decoration:underline">gebruiksvoorwaarden</button> en de <button type="button" class="gl" data-g="priv" style="display:inline;width:auto;padding:0;text-decoration:underline">privacyverklaring</button></span></label>'+m+'<button class="gb pri" data-g="mk">Account aanmaken</button><button class="gb" data-g="gback">Terug</button></div>';
   return h+'<div class="gbox"><button class="gb pri" data-g="login">Inloggen</button><button class="gb" data-g="create">Account aanmaken</button><button class="gl" data-g="guest">Doorgaan als gast</button>'+m+'<p class="meta" style="margin:0;text-align:center">Als gast kun je alles bekijken. Inchecken, liken en reageren vraagt een account.</p></div>';
 }
 function copyHtml(){var h=(typeof COPYRIGHT_HOLDER==="string"&&COPYRIGHT_HOLDER.trim())?COPYRIGHT_HOLDER.trim():"";return '<p class="cpr">© '+new Date().getFullYear()+' Chipstrack'+(h?' · '+esc(h):'')+'. Alle rechten voorbehouden.</p>'}
@@ -1696,6 +1717,7 @@ async function authAct(a){
     else if(a==="login")S.gate="login";
     else if(a==="create"){CT.code="";S.rf={};S.gate="register"}
     else if(a==="priv"){S.rf={un:val("un"),em:val("em"),agree:$("agree").checked};S.pback=S.gate;S.gate="privacy"}
+    else if(a==="terms"){S.rf={un:val("un"),em:val("em"),agree:$("agree").checked};S.pback=S.gate;S.gate="terms"}
     else if(a==="privback"){S.gate=S.pback||"auth"}
     else if(a==="guest")S.gate="app";
     else if(a==="forgot")S.gate="forgot";
@@ -1732,7 +1754,7 @@ async function authAct(a){
       else if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val("em").trim()))S.gmsg="Vul een geldig e-mailadres in.";
       else if(val("pw").length<6)S.gmsg="Kies een wachtwoord van minstens 6 tekens.";
       else if(!(CT.code||ctExact(val("cty"))))S.gmsg="Kies je land uit de lijst.";
-      else if(!$("agree").checked)S.gmsg="Bevestig dat je 16 jaar of ouder bent en akkoord gaat met de privacyverklaring.";
+      else if(!$("agree").checked)S.gmsg="Bevestig dat je 16 jaar of ouder bent en akkoord gaat met de gebruiksvoorwaarden en de privacyverklaring.";
       else if(D.profiles.some(function(q){return q.username.toLowerCase()===n.toLowerCase()}))S.gmsg="Deze gebruikersnaam is al bezet.";
       else{
         var r2=await SB.auth.signUp({email:val("em").trim(),password:val("pw"),options:{data:{username:n,country:CT.code||ctExact(val("cty"))}}});
@@ -1778,6 +1800,7 @@ document.addEventListener("click",function(e){
   else if(d.delc){delComment(d.delc)}
   else if(d.rp){var rp=d.rp.split(":");openReport(rp[0],rp[1])}
   else if(d.priv){openPrivacy()}
+  else if(d.terms){openTerms()}
   else if(d.wr){var wa=d.wr.split(":");openWrapped(wa[0],+wa[1])}
   else if(d.bi){openBadgeInfo(d.bi)}
   else if(d.cmp){openCompare(d.cmp)}
