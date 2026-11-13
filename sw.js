@@ -1,6 +1,6 @@
 /* Chipstrack service worker: pushmeldingen + offline vangnet.
    Verhoog CACHE bij elke nieuwe versie van de app-bestanden. */
-var CACHE="chipstrack-v6";
+var CACHE="chipstrack-v7";
 var SHELL=["./","index.html","manifest.webmanifest","icon-192.png","icon-512.png","icon-maskable-512.png"];
 
 self.addEventListener("install",function(e){
