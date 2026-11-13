@@ -476,7 +476,7 @@ async function loadAll(){
   D.comments=g(4).map(function(x){return{id:x.id,post:x.checkin_id,uid:x.user_id,text:x.body,ts:ms(x.created_at)}});
   D.follows=g(5).map(function(x){return{id:safe(x.follower_id+"_"+x.followed_id),from:x.follower_id,to:x.followed_id}});
   D.tags=r[6].error?[]:g(6).map(function(x){return{id:safe(x.checkin_id+"_"+x.tagged_user_id),post:x.checkin_id,uid:x.tagged_user_id,ts:ms(x.created_at)}});
-  loaded=true;softRender();
+  loaded=true;softRender();tryPend();
 }
 var Q=Promise.resolve();
 function qrun(fn){Q=Q.then(fn).then(function(r){if(r&&r.error)toast("Opslaan lukt niet: "+r.error.message);return loadAll()}).catch(function(){toast("Er ging iets mis. Probeer opnieuw.")})}
@@ -712,6 +712,26 @@ function zres(){
   }
   return h;
 }
+function postPage(id){
+  var back='<button class="btn ghost sm" data-back="1" style="margin-bottom:12px">← Terug</button>';
+  var p=D.posts.filter(function(x){return x.id===id})[0];
+  if(!p)return back+'<div class="card">Deze check-in is niet meer beschikbaar.</div>';
+  return back+cardHtml(p);
+}
+/* ---------- links vanuit pushmeldingen en de meldingenlijst ---------- */
+var PEND=null;
+function parseLink(u){try{var q=new URL(u,location.href).searchParams,c=q.get("c");if(c)return{c:c,k:q.get("k")||"post",t:Date.now()}}catch(e){}return null}
+function openCheckin(pid,k){closeModal();S.stack=[];S.tab="feed";S.det={t:"post",id:pid};render();window.scrollTo(0,0);if(k==="cm")openComments(pid)}
+function tryPend(){
+  if(!PEND||!loaded||S.gate!=="app")return;
+  var p=D.posts.filter(function(x){return x.id===PEND.c})[0];
+  if(!p){if(Date.now()-PEND.t>20000)PEND=null;return}
+  var k=PEND.k;PEND=null;
+  if(k==="tag"&&p.uid!==uid){closeModal();openForm("",p.pid);return}
+  openCheckin(p.id,k);
+}
+PEND=parseLink(location.href);if(PEND){try{history.replaceState(null,"",location.pathname+location.hash)}catch(e){}}
+if("serviceWorker" in navigator&&location.protocol!=="file:")navigator.serviceWorker.addEventListener("message",function(e){var d=e.data||{};if(d.type==="open"){var l=parseLink(d.url);if(l){PEND=l;tryPend()}}});
 function chipPage(id){
   var pr=PR[id],back='<button class="btn ghost sm" data-back="1" style="margin-bottom:12px">← Terug</button>';
   if(!pr)return back+'<div class="card">Deze chips is niet gevonden.</div>';
@@ -751,7 +771,7 @@ function render(){
   setAcct();renderTop();
   $("note").innerHTML=acct?"":'<div class="note">Je bent gast. <button class="btn sm" data-g="toauth">Inloggen of account maken</button></div>';
   var h;
-  if(S.det)h=S.det.t==="chip"?chipPage(S.det.id):S.det.t==="ranking"?rankingPage():profileHtml(S.det.id,false);
+  if(S.det)h=S.det.t==="post"?postPage(S.det.id):S.det.t==="chip"?chipPage(S.det.id):S.det.t==="ranking"?rankingPage():profileHtml(S.det.id,false);
   else if(S.tab==="feed")h=feedHtml();
   else if(S.tab==="zoek")h=zoekHtml();
   else if(S.tab==="rank")h=rankHtml();
@@ -776,7 +796,7 @@ function renderTop(){
   var tr=$("trophy");if(tr)tr.innerHTML=ic("trophy");b.innerHTML=ic("bell")+(n?'<i class="bd">'+(n>9?"9+":n)+'</i>':"");
   var t=$("ttl");
   if(S.tab==="feed"&&!S.det)t.innerHTML='<button class="bell" id="fbtn" aria-label="Filters">'+ic("filter")+(filterActive(S.flt)?'<i class="bd">•</i>':'')+'</button>';
-  else t.textContent=S.det?(S.det.t==="chip"?"Chips":S.det.t==="ranking"?"Ranglijst":"Profiel"):({zoek:"Zoeken",rank:"Stats",profiel:"Profiel"}[S.tab]||"");
+  else t.textContent=S.det?(S.det.t==="post"?"Check-in":S.det.t==="chip"?"Chips":S.det.t==="ranking"?"Ranglijst":"Profiel"):({zoek:"Zoeken",rank:"Stats",profiel:"Profiel"}[S.tab]||"");
 }
 
 /* ---------- vensters ---------- */
@@ -1739,7 +1759,7 @@ document.addEventListener("click",function(e){
   else if(t.id==="bell")openNotifs();
   else if(t.id==="trophy"){closeModal();S.stack=[];S.det={t:"ranking"};render();window.scrollTo(0,0)}
   else if(t.id==="fbtn")filterModal();
-  else if(d.nt){var nn=S.nl[+d.nt];if(nn.t==="tag"){closeModal();openForm("",nn.p.pid);return}closeModal();S.det=null;S.tab="feed";S.fd=nn.t==="post"?"fr":"all";S.flt=null;render()}
+  else if(d.nt){var nn=S.nl[+d.nt];if(nn.t==="tag"){closeModal();openForm("",nn.p.pid);return}openCheckin(nn.p.id,nn.t)}
   else if(d.g)authAct(d.g);
   else if(d.back){S.det=S.stack&&S.stack.length?S.stack.pop():null;render();window.scrollTo(0,0)}
   else if(d.user){closeModal();if(openCmId)openCmId=null;(S.stack=S.stack||[]);if(S.det)S.stack.push(S.det);else S.stack=[];S.det={t:"user",id:d.user};render();window.scrollTo(0,0)}
