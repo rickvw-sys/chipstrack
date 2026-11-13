@@ -1,6 +1,6 @@
 /* Chipstrack service worker: pushmeldingen + offline vangnet.
    Verhoog CACHE bij elke nieuwe versie van de app-bestanden. */
-var CACHE="chipstrack-v5";
+var CACHE="chipstrack-v6";
 var SHELL=["./","index.html","manifest.webmanifest","icon-192.png","icon-512.png","icon-maskable-512.png"];
 
 self.addEventListener("install",function(e){
@@ -43,7 +43,8 @@ self.addEventListener("push",function(e){
 self.addEventListener("notificationclick",function(e){
   e.notification.close();
   e.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(function(l){
-    for(var i=0;i<l.length;i++){if("focus" in l[i])return l[i].focus()}
-    return self.clients.openWindow(e.notification.data.url||"./");
+    var u=e.notification.data.url||"./";
+    for(var i=0;i<l.length;i++){if("focus" in l[i]){l[i].postMessage({type:"open",url:u});return l[i].focus()}}
+    return self.clients.openWindow(u);
   }));
 });
