@@ -433,6 +433,8 @@ article.card .tot .st.big{order:2;flex:1;text-align:center;font-size:1.25rem;let
 article.card .tot .tn{order:3;font-size:1.5rem}
 article.card .rev{margin:0 0 8px}
 article.card .pill{padding:10px}
+.tset{display:inline-flex;align-items:center;gap:10px}
+.setl{display:grid;gap:8px}.setpf{padding:8px 2px;border-bottom:1px solid var(--line);cursor:pointer}.setpf input{width:22px;height:22px;accent-color:#141414}
 </style>
 </head>
 <body>
@@ -769,7 +771,7 @@ function profileHtml(u,tabMode){
   mine.forEach(function(x){us[x.pid]=1});
   var av=mine.length?mine.reduce(function(s,x){return s+x.rating},0)/mine.length:0,fn=fullname(u),s=mine.length?statusOf(mine.length):null;
   var h=back+'<div class="card row">'+avatar(u,"big")+'<div class="grow"><div class="name">'+esc(p.username)+(u===uid?" (Jij)":"")+(p.admin?' <span class="chip" style="font-size:.7rem;padding:2px 8px;vertical-align:middle">Moderator</span>':'')+'</div>'+(fn?'<div class="meta">'+esc(fn)+'</div>':'')+(p.country&&ctName(p.country)?'<div class="meta">'+ctFlag(p.country)+' '+esc(ctName(p.country))+'</div>':'')+'</div></div>';
-  if(u===uid)h+='<div class="row" style="margin-bottom:12px"><button class="btn grow" data-edit="1">'+ic("edit")+' Profiel bewerken</button><button class="btn ghost" data-g="logout">Uitloggen</button></div>'+(PM[uid]&&PM[uid].admin?'<button class="btn full" data-adm="1" style="margin-bottom:12px">Moderatie</button>':'')+'<button class="lnk" data-priv="1" style="margin:0 12px 12px 0">Privacyverklaring</button><button class="lnk" data-terms="1" style="margin:0 0 12px">Gebruiksvoorwaarden</button>';
+  if(u===uid)h+='<div class="row" style="margin-bottom:12px"><button class="btn grow" data-edit="1">'+ic("edit")+' Profiel bewerken</button></div>'+(PM[uid]&&PM[uid].admin?'<button class="btn full" data-adm="1" style="margin-bottom:12px">Moderatie</button>':'')+'';
   else h+='<button class="btn full" data-fol="'+esc(u)+'" style="margin-bottom:12px">'+(following(u)?"Volgend ✓":"Volgen")+'</button>'+(acct?'<button class="lnk" data-rp="user:'+esc(u)+'" style="margin:-4px 0 12px">Gebruiker melden</button>':'');
   h+=wrapCard(u)+topHtml(u)+compareHtml(u)+badgesHtml(u);
   h+='<div class="stat"><div><b>'+mine.length+'</b>check-ins</div><div><b>'+keys(us).length+'</b>chips</div><div><b>'+(av?av.toFixed(1):"–")+'</b>gemiddeld</div></div>';
@@ -812,6 +814,7 @@ function renderTop(){
   var tr=$("trophy");if(tr)tr.innerHTML=ic("trophy");b.innerHTML=ic("bell")+(n?'<i class="bd">'+(n>9?"9+":n)+'</i>':"");
   var t=$("ttl");
   if(S.tab==="feed"&&!S.det)t.innerHTML='<button class="bell" id="fbtn" aria-label="Filters">'+ic("filter")+(filterActive(S.flt)?'<i class="bd">•</i>':'')+'</button>';
+  else if(S.tab==="profiel"&&!S.det)t.innerHTML='<span class="tset"><span>Profiel</span><button class="bell" id="setb" data-set="1" aria-label="Instellingen">'+'<svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>'+'</button></span>';
   else t.textContent=S.det?(S.det.t==="post"?"Check-in":S.det.t==="chip"?"Chips":S.det.t==="ranking"?"Ranglijst":"Profiel"):({zoek:"Zoeken",rank:"Stats",profiel:"Profiel"}[S.tab]||"");
 }
 
@@ -1418,6 +1421,49 @@ function openTerms(){
   m.innerHTML='<div class="modal" id="ov"><div class="sheet pvs" role="dialog" aria-label="Gebruiksvoorwaarden"><div class="row"><div class="name grow">Voorwaarden</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div><div class="pvbox2">'+termsHtml()+'</div></div></div>';
   $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
 }
+/* ---------- instellingen ---------- */
+var APP_VERSION="10";
+var PREFK=[["like","Likes op mijn check-ins"],["cm","Reacties op mijn check-ins"],["tag","Als iemand mij tagt"],["post","Nieuwe check-ins van mensen die ik volg"]];
+function prefsLocal(){try{return JSON.parse(localStorage.getItem("ct_pp_"+uid)||"{}")||{}}catch(e){return {}}}
+async function loadPrefs(){try{var r=await SB.rpc("get_push_prefs");if(!r.error&&r.data&&typeof r.data==="object"){try{localStorage.setItem("ct_pp_"+uid,JSON.stringify(r.data))}catch(e){}return r.data}}catch(e){}return prefsLocal()}
+async function savePref(k,v){var p=prefsLocal();p[k]=v;try{localStorage.setItem("ct_pp_"+uid,JSON.stringify(p))}catch(e){}try{var r=await SB.rpc("set_push_prefs",{p:p});if(r.error)toast("Opslaan mislukt. Probeer het opnieuw.")}catch(e){toast("Opslaan mislukt. Controleer je internetverbinding.")}}
+function openPassword(){
+  var m=$("modal2");
+  m.innerHTML='<div class="modal mid" id="ov2"><div class="dlg" role="dialog" aria-label="Wachtwoord wijzigen"><div class="row"><div class="name grow">Wachtwoord wijzigen</div><button class="act" id="pcx" aria-label="Sluiten">'+ic("x")+'</button></div>'
+   +'<label for="pw1">Nieuw wachtwoord</label><input id="pw1" type="password" autocomplete="new-password" placeholder="Minstens 6 tekens"><label for="pw2">Herhaal nieuw wachtwoord</label><input id="pw2" type="password" autocomplete="new-password"><p class="meta" id="pwm" style="margin:6px 0 0;min-height:1.2em" role="status"></p><button class="btn full" id="pwok" style="margin-top:8px">Wachtwoord wijzigen</button></div></div>';
+  $("pcx").onclick=function(){closeModal("modal2")};$("ov2").onclick=function(e){if(e.target.id==="ov2")closeModal("modal2")};
+  $("pwok").onclick=async function(){
+    var a=$("pw1").value,b=$("pw2").value,n=$("pwm"),bt=$("pwok");
+    if(a.length<6){n.textContent="Kies een wachtwoord van minstens 6 tekens.";return}
+    if(a!==b){n.textContent="De twee wachtwoorden zijn niet gelijk.";return}
+    bt.disabled=true;n.textContent="Bezig...";
+    try{var r=await SB.auth.updateUser({password:a});
+      if(r.error){n.textContent=/same|different/i.test(r.error.message)?"Kies een ander wachtwoord dan je huidige.":"Wijzigen mislukt: "+r.error.message}
+      else{closeModal("modal2");toast("Wachtwoord gewijzigd");return}
+    }catch(e){n.textContent="Wijzigen mislukt. Controleer je internetverbinding."}
+    bt.disabled=false;
+  };
+}
+function openSettings(){
+  var m=$("modal"),h='<div class="row"><div class="name grow">Instellingen</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div>';
+  var sec=function(t){return '<div class="name" style="font-size:1rem;margin:20px 0 8px">'+t+'</div>'};
+  if(acct){
+    h+=sec("Account")+'<div class="setl"><button class="btn ghost full" id="setedit">Profiel bewerken</button><button class="btn ghost full" id="setpw">Wachtwoord wijzigen</button><button class="btn ghost full" id="setout" data-g="logout">Uitloggen</button><button class="lnk" id="setdel" style="color:#c0392b;margin-top:4px">Account verwijderen</button></div>';
+    var lp=prefsLocal();
+    h+=sec("Meldingen")+'<div id="pushbox"></div><div class="meta" style="margin:6px 0 4px">Kies waarover je een melding wilt.</div>'+PREFK.map(function(k){return '<label class="row setpf"><span class="grow">'+k[1]+'</span><input type="checkbox" data-pf="'+k[0]+'"'+(lp[k[0]]===false?"":" checked")+'></label>'}).join("");
+  }
+  h+=sec("Contact en feedback")+'<p class="meta" style="margin:0 0 8px">Een idee, een fout gevonden of een vraag? Laat het ons weten.</p><a class="btn ghost full" href="mailto:info@chipstrack.nl?subject=Chipstrack%20feedback" style="display:block">Mail naar info@chipstrack.nl</a>';
+  h+=sec("Over Chipstrack")+'<div class="row" style="gap:16px"><button class="lnk" data-priv="1">Privacyverklaring</button><button class="lnk" data-terms="1">Gebruiksvoorwaarden</button></div><p class="meta" style="margin:12px 0 0">Chipstrack · versie '+APP_VERSION+'</p>';
+  m.innerHTML='<div class="modal" id="ov"><div class="sheet pvs" id="setsheet" role="dialog" aria-label="Instellingen">'+h+'</div></div>';
+  $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
+  if(acct){
+    $("setedit").onclick=function(){openEdit()};$("setpw").onclick=function(){openPassword()};
+    $("setout").onclick=function(){closeModal()};$("setdel").onclick=function(){openDeleteAccount()};
+    pushBox();
+    $("setsheet").addEventListener("change",function(e){var t=e.target;if(t&&t.dataset&&t.dataset.pf)savePref(t.dataset.pf,t.checked)});
+    loadPrefs().then(function(p){if(!$("setsheet"))return;PREFK.forEach(function(k){var c=document.querySelector('[data-pf="'+k[0]+'"]');if(c)c.checked=p[k[0]]!==false})});
+  }
+}
 function openPrivacy(){
   var m=$("modal");
   m.innerHTML='<div class="modal" id="ov"><div class="sheet pvs" role="dialog" aria-label="Privacyverklaring"><div class="row"><div class="name grow">Privacy</div><button class="act" id="cx" aria-label="Sluiten">'+ic("x")+'</button></div><div class="pvbox2">'+privacyHtml()+'</div></div></div>';
@@ -1711,7 +1757,7 @@ function pushBox(msg){
   if(!pushOk()){el.innerHTML=ios&&!sa?'<p class="meta">Pushmeldingen? Zet Chipstrack eerst op je beginscherm (deelmenu &gt; Zet op beginscherm) en open de app vanaf daar.</p>':"";return}
   pushSub().then(function(x){
     var on=!!x.sub&&Notification.permission==="granted";
-    el.innerHTML='<div class="row" style="margin:10px 0 4px"><span class="grow"><b>Pushmeldingen</b><br><small class="meta">Bij likes en reacties op je check-ins</small></span><button class="btn ghost" id="pshb">'+(on?"Uitzetten":"Aanzetten")+'</button></div><p class="meta" id="pshm" role="status">'+esc(msg||"")+'</p>';
+    el.innerHTML='<div class="row" style="margin:10px 0 4px"><span class="grow"><b>Pushmeldingen</b><br><small class="meta">Likes, reacties, tags en check-ins van vrienden</small></span><button class="btn ghost" id="pshb">'+(on?"Uitzetten":"Aanzetten")+'</button></div><p class="meta" id="pshm" role="status">'+esc(msg||"")+'</p>';
     $("pshb").onclick=async function(){this.disabled=true;var m="";try{if(on)await pushOff();else m=await pushOn()}catch(e){m="Er ging iets mis. Probeer het opnieuw."}pushBox(m)};
   });
 }
@@ -1823,6 +1869,7 @@ document.addEventListener("click",function(e){
   else if(d.delp){var dp=D.posts.filter(function(x){return x.id===d.delp})[0];if(confirm(dp&&dp.uid!==uid?"Check-in van "+uname(dp.uid)+" verwijderen?":"Deze check-in verwijderen?"))del("posts",d.delp)}
   else if(d.delc){delComment(d.delc)}
   else if(d.rp){var rp=d.rp.split(":");openReport(rp[0],rp[1])}
+  else if(d.set){openSettings()}
   else if(d.priv){openPrivacy()}
   else if(d.terms){openTerms()}
   else if(d.wr){var wa=d.wr.split(":");openWrapped(wa[0],+wa[1])}
