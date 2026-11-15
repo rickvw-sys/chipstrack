@@ -84,7 +84,7 @@ P(/^(\d+) (dag|dagen)$/,function(a,b){return a+(b==="dag"?" day":" days")});
 P(/^Chipstrack · versie (.+)$/,function(a){return "Chipstrack · version "+a});
 P(/^(.+?)(\s+[✓✔])$/,function(a,b){return a+b});
 
-P(/^Ik volg \((\d+)\)$/,function(a){return "Following ("+a+")"});
+P(/^Volgend \((\d+)\)$/,function(a){return "Following ("+a+")"});
 P(/^Volgers \((\d+)\)$/,function(a){return "Followers ("+a+")"});
 
 })();
@@ -885,7 +885,7 @@ function friendsList(){
      +'</div><button class="act'+(following(u)?" on":"")+'" data-fol="'+esc(u)+'">'+(following(u)?"Volgend":(k==="volgers"?"Volg terug":"Volgen"))+'</button></div>'}).join("");
 }
 function friendsHtml(){
-  var k=S.fv||"volg",nv=friendIds("volg").length,nf=friendIds("volgers").length,h='<div class="seg"><button data-fv="volg" class="'+(k==="volg"?"on":"")+'">Ik volg ('+nv+')</button><button data-fv="volgers" class="'+(k==="volgers"?"on":"")+'">Volgers ('+nf+')</button></div>';
+  var k=S.fv||"volg",nv=friendIds("volg").length,nf=friendIds("volgers").length,h='<div class="seg"><button data-fv="volg" class="'+(k==="volg"?"on":"")+'">Volgend ('+nv+')</button><button data-fv="volgers" class="'+(k==="volgers"?"on":"")+'">Volgers ('+nf+')</button></div>';
   h+='<input id="fsq" value="'+esc(S.fq||"")+'" placeholder="Zoek in je vrienden" aria-label="Zoek in je vrienden" autocomplete="off" style="margin:10px 0">';
   if(k==="volg"&&!S.fq){
     var fl=friendIds("volg"),rec=D.posts.filter(function(p){return fl.indexOf(p.uid)>=0&&(imgOk(p.img)||imgOk((PR[p.pid]||{}).photo))}).sort(function(a,b){return b.ts-a.ts}).slice(0,3);
