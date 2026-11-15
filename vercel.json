@@ -64,5 +64,11 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/c/:id",
+      "destination": "/api/c?id=:id"
+    }
   ]
 }
