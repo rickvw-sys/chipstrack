@@ -1,5 +1,5 @@
 // Chipstrack service worker: offline-schil, pushmeldingen en openen van een check-in bij een tik op een melding.
-var CACHE = "chipstrack-v13";
+var CACHE = "chipstrack-v14";
 var SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "privacy.html", "voorwaarden.html"];
 
 self.addEventListener("install", function (e) {
