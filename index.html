@@ -1422,7 +1422,7 @@ function openTerms(){
   $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
 }
 /* ---------- instellingen ---------- */
-var APP_VERSION="10";
+var APP_VERSION="11";
 var PREFK=[["like","Likes op mijn check-ins"],["cm","Reacties op mijn check-ins"],["tag","Als iemand mij tagt"],["post","Nieuwe check-ins van mensen die ik volg"]];
 function prefsLocal(){try{return JSON.parse(localStorage.getItem("ct_pp_"+uid)||"{}")||{}}catch(e){return {}}}
 async function loadPrefs(){try{var r=await SB.rpc("get_push_prefs");if(!r.error&&r.data&&typeof r.data==="object"){try{localStorage.setItem("ct_pp_"+uid,JSON.stringify(r.data))}catch(e){}return r.data}}catch(e){}return prefsLocal()}
@@ -1780,6 +1780,13 @@ function gateHtml(){
 }
 function copyHtml(){var h=(typeof COPYRIGHT_HOLDER==="string"&&COPYRIGHT_HOLDER.trim())?COPYRIGHT_HOLDER.trim():"";return '<p class="cpr">© '+new Date().getFullYear()+' Chipstrack'+(h?' · '+esc(h):'')+'. Alle rechten voorbehouden.</p>'}
 function showGate(){var g=$("gate");if(S.gate==="app"){g.style.display="none";g.innerHTML="";pushSync();return}g.style.display="flex";g.innerHTML=gateHtml()+copyHtml()}
+async function authFn(body){
+  try{var res=await fetch(SUPABASE_URL+"/functions/v1/login",{method:"POST",headers:{"Content-Type":"application/json","apikey":SUPABASE_ANON_KEY,"Authorization":"Bearer "+SUPABASE_ANON_KEY},body:JSON.stringify(body)});
+    var j={};try{j=await res.json()}catch(e){}
+    if(j&&(j.session||j.ok))return j;
+    return {error:(j&&j.error)||(res.status===429?"rate":"net")}}
+  catch(e){return {error:"net"}}
+}
 async function authAct(a){
   S.gmsg="";
   try{
@@ -1795,10 +1802,8 @@ async function authAct(a){
       var id2=val("em").trim();
       if(!id2)S.gmsg="Vul je gebruikersnaam of e-mailadres in.";
       else{
-        var ml=id2;
-        if(id2.indexOf("@")<0){var l2=await SB.rpc("email_for_login",{identifier:id2});ml=l2.data||""}
-        if(ml){var rr=await SB.auth.resetPasswordForEmail(ml,{redirectTo:location.origin+location.pathname});
-          if(rr.error){S.gmsg=/rate|seconds|limit/i.test(rr.error.message||"")?"Wacht even en probeer het over een minuut opnieuw.":"De e-mail kon niet worden verstuurd. Probeer het later opnieuw of mail naar info@chipstrack.nl.";showGate();render();return}}
+        var rr=await authFn({action:"reset",identifier:id2,redirectTo:location.origin+location.pathname});
+        if(rr.error){S.gmsg=rr.error==="rate"?"Wacht even en probeer het over een minuut opnieuw.":"De e-mail kon niet worden verstuurd. Probeer het later opnieuw of mail naar info@chipstrack.nl.";showGate();render();return}
         S.gate="login";S.gmsg="Als dit account bestaat, hebben we een e-mail gestuurd met een link om je wachtwoord te wijzigen."
       }
     }
@@ -1813,11 +1818,11 @@ async function authAct(a){
     }
     else if(a==="logout"){try{await pushOff()}catch(e){}PSY="";await SB.auth.signOut();idok=false;uid="lokaal";S.gate="auth";S.tab="feed";S.det=null}
     else if(a==="dologin"){
-      var ident=val("em").trim(),mail=ident;
-      if(ident&&ident.indexOf("@")<0){var lk=await SB.rpc("email_for_login",{identifier:ident});mail=lk.data||""}
-      var r=mail?await SB.auth.signInWithPassword({email:mail,password:val("pw")}):{error:{message:""}};
-      if(r.error)S.gmsg=/confirm/i.test(r.error.message||"")?"Bevestig eerst je e-mailadres via de mail die we je stuurden.":"Gebruikersnaam, e-mailadres of wachtwoord klopt niet.";
-      else{uid=r.data.user.id;idok=true;await loadAll();S.gate="app"}
+      var ident=val("em").trim();
+      var r=ident&&val("pw")?await authFn({action:"login",identifier:ident,password:val("pw")}):{error:"invalid"};
+      if(!r.error&&r.session){var sr=await SB.auth.setSession({access_token:r.session.access_token,refresh_token:r.session.refresh_token});if(sr.error||!sr.data.user)r={error:"invalid"};else r={user:sr.data.user}}
+      if(r.error)S.gmsg=r.error==="confirm"?"Bevestig eerst je e-mailadres via de mail die we je stuurden.":r.error==="rate"?"Te veel pogingen. Wacht even en probeer het over een minuut opnieuw.":"Gebruikersnaam, e-mailadres of wachtwoord klopt niet.";
+      else{uid=r.user.id;idok=true;await loadAll();S.gate="app"}
     }else if(a==="mk"){
       var n=val("un").trim();S.rf={un:val("un"),em:val("em"),agree:$("agree").checked};
       if(n.length<3||!/^[A-Za-z0-9_.-]+$/.test(n)||n.length>24)S.gmsg="Gebruikersnaam: 3 tot 24 tekens, letters, cijfers, _ . of -";
