@@ -7,7 +7,7 @@
 var SUPABASE_URL="https://cjnixgeeqsezrepwkwfm.supabase.co",SUPABASE_ANON_KEY="sb_publishable_7_ECMcbL-K_Ma-EvzBVeqw_EfH9EgKC";
 // Optioneel: je e-mailadres voor vragen over privacy (komt in de privacyverklaring)
 var PRIVACY_EMAIL="info@chipstrack.nl";
-var COPYRIGHT_HOLDER="Rick van Weerden";
+var COPYRIGHT_HOLDER="";
 // =====================================================================
 </script>
 <script>
@@ -872,11 +872,11 @@ function openEdit(){
    +'<div class="row" style="margin:12px 0"><span class="av big" id="epv">'+(imgOk(p.avatar)?'<img alt="" src="'+imgOk(p.avatar)+'">':esc(p.username.charAt(0).toUpperCase()))+'</span><button class="btn ghost" id="epk">Profielfoto wijzigen</button></div>'
    +'<label for="efn">Voornaam</label><input id="efn" maxlength="40" value="'+esc(p.first)+'" autocomplete="given-name"><label for="eln">Achternaam</label><input id="eln" maxlength="40" value="'+esc(p.last)+'" autocomplete="family-name"><label for="cty">Land waar je woont</label>'+ctBox(p.country)
    +'<label for="eun">Gebruikersnaam</label><input id="eun" value="'+esc(p.username)+'" disabled><p class="meta" style="margin:4px 0 0">Je gebruikersnaam is uniek en kun je niet wijzigen.</p>'
-   +'<div style="margin-top:18px;padding-top:6px;border-top:1px solid var(--line)"><div class="name" style="font-size:1.05rem;margin-top:10px">Wachtwoord wijzigen</div><label for="pw1">Nieuw wachtwoord</label><input id="pw1" type="password" autocomplete="new-password" placeholder="Minstens 6 tekens"><label for="pw2">Herhaal nieuw wachtwoord</label><input id="pw2" type="password" autocomplete="new-password"><p class="meta" id="pwm" style="margin:6px 0 0;min-height:1.2em" role="status"></p><button class="btn full" id="pwok" style="margin-top:8px">Wachtwoord wijzigen</button></div>'
+   +'<div style="margin-top:18px;padding-top:6px;border-top:1px solid var(--line)"><div class="name" style="font-size:1.05rem;margin-top:10px">Wachtwoord wijzigen</div><label for="pw1">Nieuw wachtwoord</label><input id="pw1" type="password" autocomplete="new-password" placeholder="Minstens 8 tekens"><label for="pw2">Herhaal nieuw wachtwoord</label><input id="pw2" type="password" autocomplete="new-password"><p class="meta" id="pwm" style="margin:6px 0 0;min-height:1.2em" role="status"></p><button class="btn full" id="pwok" style="margin-top:8px">Wachtwoord wijzigen</button></div>'
    +'<div class="row" style="margin-top:14px"><button class="btn ghost" id="ecx">Annuleer</button><button class="btn grow" id="eok">Opslaan</button></div><div style="margin-top:22px;padding-top:8px;border-top:1px solid var(--line)"><button class="lnk" id="eda" style="color:#c0392b">Account verwijderen</button></div></div></div>';
   $("pwok").onclick=async function(){
     var a=$("pw1").value,b=$("pw2").value,n=$("pwm"),bt=$("pwok");
-    if(a.length<6){n.textContent="Kies een wachtwoord van minstens 6 tekens.";return}
+    if(a.length<8){n.textContent="Kies een wachtwoord van minstens 8 tekens.";return}
     if(a!==b){n.textContent="De twee wachtwoorden zijn niet gelijk.";return}
     bt.disabled=true;n.textContent="Bezig...";
     try{var r=await SB.auth.updateUser({password:a});
@@ -1422,7 +1422,7 @@ function openTerms(){
   $("cx").onclick=function(){closeModal()};$("ov").onclick=function(e){if(e.target.id==="ov")closeModal()};
 }
 /* ---------- instellingen ---------- */
-var APP_VERSION="11";
+var APP_VERSION="12";
 var PREFK=[["like","Likes op mijn check-ins"],["cm","Reacties op mijn check-ins"],["tag","Als iemand mij tagt"],["post","Nieuwe check-ins van mensen die ik volg"]];
 function prefsLocal(){try{return JSON.parse(localStorage.getItem("ct_pp_"+uid)||"{}")||{}}catch(e){return {}}}
 async function loadPrefs(){try{var r=await SB.rpc("get_push_prefs");if(!r.error&&r.data&&typeof r.data==="object"){try{localStorage.setItem("ct_pp_"+uid,JSON.stringify(r.data))}catch(e){}return r.data}}catch(e){}return prefsLocal()}
@@ -1430,11 +1430,11 @@ async function savePref(k,v){var p=prefsLocal();p[k]=v;try{localStorage.setItem(
 function openPassword(){
   var m=$("modal2");
   m.innerHTML='<div class="modal mid" id="ov2"><div class="dlg" role="dialog" aria-label="Wachtwoord wijzigen"><div class="row"><div class="name grow">Wachtwoord wijzigen</div><button class="act" id="pcx" aria-label="Sluiten">'+ic("x")+'</button></div>'
-   +'<label for="pw1">Nieuw wachtwoord</label><input id="pw1" type="password" autocomplete="new-password" placeholder="Minstens 6 tekens"><label for="pw2">Herhaal nieuw wachtwoord</label><input id="pw2" type="password" autocomplete="new-password"><p class="meta" id="pwm" style="margin:6px 0 0;min-height:1.2em" role="status"></p><button class="btn full" id="pwok" style="margin-top:8px">Wachtwoord wijzigen</button></div></div>';
+   +'<label for="pw1">Nieuw wachtwoord</label><input id="pw1" type="password" autocomplete="new-password" placeholder="Minstens 8 tekens"><label for="pw2">Herhaal nieuw wachtwoord</label><input id="pw2" type="password" autocomplete="new-password"><p class="meta" id="pwm" style="margin:6px 0 0;min-height:1.2em" role="status"></p><button class="btn full" id="pwok" style="margin-top:8px">Wachtwoord wijzigen</button></div></div>';
   $("pcx").onclick=function(){closeModal("modal2")};$("ov2").onclick=function(e){if(e.target.id==="ov2")closeModal("modal2")};
   $("pwok").onclick=async function(){
     var a=$("pw1").value,b=$("pw2").value,n=$("pwm"),bt=$("pwok");
-    if(a.length<6){n.textContent="Kies een wachtwoord van minstens 6 tekens.";return}
+    if(a.length<8){n.textContent="Kies een wachtwoord van minstens 8 tekens.";return}
     if(a!==b){n.textContent="De twee wachtwoorden zijn niet gelijk.";return}
     bt.disabled=true;n.textContent="Bezig...";
     try{var r=await SB.auth.updateUser({password:a});
@@ -1771,11 +1771,11 @@ function gateHtml(){
   var em='<input id="em" type="email" autocomplete="email" placeholder="E-mailadres" aria-label="E-mailadres">',lg='<input id="em" type="text" autocomplete="username" autocapitalize="none" placeholder="Gebruikersnaam of e-mailadres" aria-label="Gebruikersnaam of e-mailadres">';
   if(st==="login")return h+'<div class="gbox"><div class="name">Inloggen</div>'+lg+'<input id="pw" type="password" autocomplete="current-password" placeholder="Wachtwoord" aria-label="Wachtwoord">'+m+'<button class="gb pri" data-g="dologin">Inloggen</button><button class="gl" data-g="forgot">Wachtwoord vergeten?</button><button class="gb" data-g="gback">Terug</button></div>';
   if(st==="forgot")return h+'<div class="gbox"><div class="name">Wachtwoord vergeten</div><p class="meta" style="margin:0 0 10px">Vul je gebruikersnaam of e-mailadres in. Je krijgt een e-mail met een link om een nieuw wachtwoord te kiezen.</p>'+lg+m+'<button class="gb pri" data-g="doforgot">Stuur e-mail</button><button class="gb" data-g="login">Terug naar inloggen</button></div>';
-  if(st==="reset")return h+'<div class="gbox"><div class="name">Nieuw wachtwoord kiezen</div><input id="pw" type="password" autocomplete="new-password" placeholder="Nieuw wachtwoord (minstens 6 tekens)" aria-label="Nieuw wachtwoord"><input id="pw2" type="password" autocomplete="new-password" placeholder="Herhaal nieuw wachtwoord" aria-label="Herhaal nieuw wachtwoord">'+m+'<button class="gb pri" data-g="doreset">Wachtwoord opslaan</button></div>';
+  if(st==="reset")return h+'<div class="gbox"><div class="name">Nieuw wachtwoord kiezen</div><input id="pw" type="password" autocomplete="new-password" placeholder="Nieuw wachtwoord (minstens 8 tekens)" aria-label="Nieuw wachtwoord"><input id="pw2" type="password" autocomplete="new-password" placeholder="Herhaal nieuw wachtwoord" aria-label="Herhaal nieuw wachtwoord">'+m+'<button class="gb pri" data-g="doreset">Wachtwoord opslaan</button></div>';
   var RF=S.rf||{};
   if(st==="terms")return h+'<div class="gbox" style="max-width:420px"><div class="pvbox">'+termsHtml()+'</div><button class="gb pri" data-g="privback">Terug</button></div>';
   if(st==="privacy")return h+'<div class="gbox" style="max-width:420px"><div class="pvbox">'+privacyHtml()+'</div><button class="gb pri" data-g="privback">Terug</button></div>';
-  if(st==="register")return h+'<div class="gbox"><div class="name">Account aanmaken</div><input id="un" maxlength="24" autocomplete="off" autocapitalize="none" placeholder="Gebruikersnaam" aria-label="Gebruikersnaam" value="'+esc(RF.un||"")+'">'+em.replace("<input ",'<input value="'+esc(RF.em||"")+'" ')+'<input id="pw" type="password" autocomplete="new-password" placeholder="Wachtwoord (minstens 6 tekens)" aria-label="Wachtwoord">'+ctBox(CT.code)+'<label class="ck"><input type="checkbox" id="agree"'+(RF.agree?" checked":"")+'><span>Ik ben 16 jaar of ouder en ga akkoord met de <button type="button" class="gl" data-g="terms" style="display:inline;width:auto;padding:0;text-decoration:underline">gebruiksvoorwaarden</button> en de <button type="button" class="gl" data-g="priv" style="display:inline;width:auto;padding:0;text-decoration:underline">privacyverklaring</button></span></label>'+m+'<button class="gb pri" data-g="mk">Account aanmaken</button><button class="gb" data-g="gback">Terug</button></div>';
+  if(st==="register")return h+'<div class="gbox"><div class="name">Account aanmaken</div><input id="un" maxlength="24" autocomplete="off" autocapitalize="none" placeholder="Gebruikersnaam" aria-label="Gebruikersnaam" value="'+esc(RF.un||"")+'">'+em.replace("<input ",'<input value="'+esc(RF.em||"")+'" ')+'<input id="pw" type="password" autocomplete="new-password" placeholder="Wachtwoord (minstens 8 tekens)" aria-label="Wachtwoord">'+ctBox(CT.code)+'<label class="ck"><input type="checkbox" id="agree"'+(RF.agree?" checked":"")+'><span>Ik ben 16 jaar of ouder en ga akkoord met de <button type="button" class="gl" data-g="terms" style="display:inline;width:auto;padding:0;text-decoration:underline">gebruiksvoorwaarden</button> en de <button type="button" class="gl" data-g="priv" style="display:inline;width:auto;padding:0;text-decoration:underline">privacyverklaring</button></span></label>'+m+'<button class="gb pri" data-g="mk">Account aanmaken</button><button class="gb" data-g="gback">Terug</button></div>';
   return h+'<div class="gbox"><button class="gb pri" data-g="login">Inloggen</button><button class="gb" data-g="create">Account aanmaken</button><button class="gl" data-g="guest">Doorgaan als gast</button>'+m+'<p class="meta" style="margin:0;text-align:center">Als gast kun je alles bekijken. Inchecken, liken en reageren vraagt een account.</p></div>';
 }
 function copyHtml(){var h=(typeof COPYRIGHT_HOLDER==="string"&&COPYRIGHT_HOLDER.trim())?COPYRIGHT_HOLDER.trim():"";return '<p class="cpr">© '+new Date().getFullYear()+' Chipstrack'+(h?' · '+esc(h):'')+'. Alle rechten voorbehouden.</p>'}
@@ -1808,7 +1808,7 @@ async function authAct(a){
       }
     }
     else if(a==="doreset"){
-      if(val("pw").length<6)S.gmsg="Kies een wachtwoord van minstens 6 tekens.";
+      if(val("pw").length<8)S.gmsg="Kies een wachtwoord van minstens 8 tekens.";
       else if(val("pw")!==val("pw2"))S.gmsg="De twee wachtwoorden zijn niet gelijk.";
       else{
         var ur=await SB.auth.updateUser({password:val("pw")});
@@ -1827,7 +1827,7 @@ async function authAct(a){
       var n=val("un").trim();S.rf={un:val("un"),em:val("em"),agree:$("agree").checked};
       if(n.length<3||!/^[A-Za-z0-9_.-]+$/.test(n)||n.length>24)S.gmsg="Gebruikersnaam: 3 tot 24 tekens, letters, cijfers, _ . of -";
       else if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(val("em").trim()))S.gmsg="Vul een geldig e-mailadres in.";
-      else if(val("pw").length<6)S.gmsg="Kies een wachtwoord van minstens 6 tekens.";
+      else if(val("pw").length<8)S.gmsg="Kies een wachtwoord van minstens 8 tekens.";
       else if(!(CT.code||ctExact(val("cty"))))S.gmsg="Kies je land uit de lijst.";
       else if(!$("agree").checked)S.gmsg="Bevestig dat je 16 jaar of ouder bent en akkoord gaat met de gebruiksvoorwaarden en de privacyverklaring.";
       else if(D.profiles.some(function(q){return q.username.toLowerCase()===n.toLowerCase()}))S.gmsg="Deze gebruikersnaam is al bezet.";
