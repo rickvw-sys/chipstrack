@@ -1,50 +1,89 @@
-/* Chipstrack service worker: pushmeldingen + offline vangnet.
-   Verhoog CACHE bij elke nieuwe versie van de app-bestanden. */
-var CACHE="chipstrack-v11";
-var SHELL=["./","index.html","manifest.webmanifest","icon-192.png","icon-512.png","icon-maskable-512.png"];
+// Chipstrack service worker: offline-schil, pushmeldingen en openen van een check-in bij een tik op een melding.
+var CACHE = "chipstrack-v12";
+var SHELL = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "privacy.html", "voorwaarden.html"];
 
-self.addEventListener("install",function(e){
-  e.waitUntil(caches.open(CACHE).then(function(c){
-    return Promise.all(SHELL.map(function(u){return c.add(u).catch(function(){})}));
-  }).then(function(){return self.skipWaiting()}));
-});
-self.addEventListener("activate",function(e){
-  e.waitUntil(caches.keys().then(function(k){
-    return Promise.all(k.filter(function(n){return n!==CACHE}).map(function(n){return caches.delete(n)}));
-  }).then(function(){return self.clients.claim()}));
+self.addEventListener("install", function (e) {
+  e.waitUntil(
+    caches.open(CACHE).then(function (c) {
+      return Promise.all(SHELL.map(function (u) { return c.add(u).catch(function () {}); }));
+    }).then(function () { return self.skipWaiting(); })
+  );
 });
 
-/* Alleen eigen bestanden (GET). Supabase, lettertypen en kaarten gaan altijd rechtstreeks naar het netwerk. */
-self.addEventListener("fetch",function(e){
-  var r=e.request;
-  if(r.method!=="GET")return;
-  var u=new URL(r.url);
-  if(u.origin!==location.origin)return;
-  if(r.mode==="navigate"){
-    // pagina: eerst netwerk (altijd de nieuwste app), anders de opgeslagen versie
-    e.respondWith(fetch(r).then(function(res){
-      var cp=res.clone();caches.open(CACHE).then(function(c){c.put("index.html",cp)});return res;
-    }).catch(function(){return caches.match("index.html").then(function(m){return m||caches.match("./")})}));
+self.addEventListener("activate", function (e) {
+  e.waitUntil(
+    caches.keys().then(function (keys) {
+      return Promise.all(keys.filter(function (k) { return k !== CACHE; }).map(function (k) { return caches.delete(k); }));
+    }).then(function () { return self.clients.claim(); })
+  );
+});
+
+// Alleen bestanden van de app zelf; Supabase, lettertypen en andere diensten gaan altijd rechtstreeks via het netwerk.
+self.addEventListener("fetch", function (e) {
+  var req = e.request;
+  if (req.method !== "GET") return;
+  var url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname.slice(-6) === "/sw.js") return;
+  if (req.mode === "navigate") {
+    // Eerst het netwerk (altijd de nieuwste app), anders de opgeslagen versie.
+    e.respondWith(
+      fetch(req).then(function (res) {
+        if (res && res.ok) {
+          var copy = res.clone();
+          caches.open(CACHE).then(function (c) { c.put(new Request(url.origin + url.pathname), copy); });
+        }
+        return res;
+      }).catch(function () {
+        return caches.match(req, { ignoreSearch: true }).then(function (m) {
+          return m || caches.match("index.html") || caches.match("./");
+        });
+      })
+    );
     return;
   }
-  // overige eigen bestanden (iconen, manifest): uit cache, ondertussen verversen
-  e.respondWith(caches.match(r).then(function(m){
-    var net=fetch(r).then(function(res){
-      if(res&&res.ok){var cp=res.clone();caches.open(CACHE).then(function(c){c.put(r,cp)})}return res;
-    }).catch(function(){return m});
-    return m||net;
-  }));
+  // Afbeeldingen, manifest en dergelijke: uit de opslag, ondertussen vernieuwen.
+  e.respondWith(
+    caches.match(req).then(function (hit) {
+      var net = fetch(req).then(function (res) {
+        if (res && res.ok) { var copy = res.clone(); caches.open(CACHE).then(function (c) { c.put(req, copy); }); }
+        return res;
+      }).catch(function () { return hit; });
+      return hit || net;
+    })
+  );
 });
 
-self.addEventListener("push",function(e){
-  var d={};try{d=e.data.json()}catch(x){}
-  e.waitUntil(self.registration.showNotification(d.title||"Chipstrack",{body:d.body||"",icon:"icon-192.png",badge:"icon-192.png",tag:d.tag||undefined,data:{url:d.url||"./"}}));
+// Pushmelding ontvangen: { title, body, tag, url }
+self.addEventListener("push", function (e) {
+  var d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = { body: e.data ? e.data.text() : "" }; }
+  e.waitUntil(
+    self.registration.showNotification(d.title || "Chipstrack", {
+      body: d.body || "",
+      tag: d.tag || undefined,
+      icon: "icon-192.png",
+      badge: "icon-192.png",
+      data: { url: d.url || "./" }
+    })
+  );
 });
-self.addEventListener("notificationclick",function(e){
+
+// Tik op een melding: open direct de bijbehorende check-in.
+self.addEventListener("notificationclick", function (e) {
   e.notification.close();
-  e.waitUntil(self.clients.matchAll({type:"window",includeUncontrolled:true}).then(function(l){
-    var u=e.notification.data.url||"./";
-    for(var i=0;i<l.length;i++){if("focus" in l[i]){l[i].postMessage({type:"open",url:u});return l[i].focus()}}
-    return self.clients.openWindow(u);
-  }));
+  var target = (e.notification.data && e.notification.data.url) || "./";
+  var full = new URL(target, self.registration.scope).href;
+  e.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(function (list) {
+      for (var i = 0; i < list.length; i++) {
+        var c = list[i];
+        if (c.url.indexOf(self.registration.scope) === 0 && "focus" in c) {
+          c.postMessage({ type: "open", url: full });
+          return c.focus();
+        }
+      }
+      return self.clients.openWindow ? self.clients.openWindow(full) : null;
+    })
+  );
 });
