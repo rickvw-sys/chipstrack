@@ -1,0 +1,38 @@
+# Chipstrack app op Plesk (Apache). Zelfde beveiliging als vercel.json.
+RewriteEngine On
+
+# Altijd HTTPS
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+# Deellink met voorbeeldkaart: /c/<id> -> c.php
+RewriteRule ^c/([^/]+)/?$ c.php?id=$1 [L,QSA]
+
+# Uitnodigingslink met voorbeeldkaart: /u/<gebruikersnaam> -> u.php
+RewriteRule ^u/([^/]+)/?$ u.php?u=$1 [L,QSA]
+
+<IfModule mod_headers.c>
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://cjnixgeeqsezrepwkwfm.supabase.co; media-src 'self' blob:; connect-src 'self' https://cjnixgeeqsezrepwkwfm.supabase.co wss://cjnixgeeqsezrepwkwfm.supabase.co https://world.openfoodfacts.org https://nominatim.openstreetmap.org; worker-src 'self' blob:; manifest-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "DENY"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(self), geolocation=(self), microphone=(), payment=(), usb=(), bluetooth=()"
+
+  <Files "sw.js">
+    Header set Cache-Control "no-cache"
+    Header set Service-Worker-Allowed "/"
+  </Files>
+  <FilesMatch "^assetlinks\.json$">
+    Header set Access-Control-Allow-Origin "*"
+  </FilesMatch>
+</IfModule>
+
+AddType application/manifest+json .webmanifest
+
+# Geen mappen tonen, en repo-bestanden die op de server niets doen afschermen
+Options -Indexes
+<FilesMatch "^(vercel\.json|\.gitignore|README.*)$">
+  Require all denied
+</FilesMatch>
+RedirectMatch 404 ^/api/
